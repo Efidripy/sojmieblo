@@ -66,6 +66,37 @@ git clone https://github.com/Efidripy/sojmieblo.git && cd sojmieblo && npm insta
 
 Подробнее см. в `public/config.js`.
 
+## 🌐 Nginx Configuration
+
+If deploying with Nginx as a reverse proxy, ensure you configure the maximum upload size to match the application limits (30MB):
+
+**For Nginx configuration**, add to your server block:
+```nginx
+server {
+    # ... other configuration ...
+    
+    # Increase client body size limit for large image uploads (30MB)
+    client_max_body_size 30M;
+    
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        
+        # Important: Allow large uploads
+        client_max_body_size 30M;
+    }
+}
+```
+
+After updating the configuration:
+```bash
+sudo nginx -t          # Test configuration
+sudo systemctl reload nginx  # Apply changes
+```
+
 ## 🔧 Управление
 
 **Проверка статуса:**
