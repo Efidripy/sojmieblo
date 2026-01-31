@@ -10,7 +10,9 @@ const FileManager = require('./utils/fileManager');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MAX_IMAGE_LENGTH = parseInt(process.env.MAX_IMAGE_LENGTH) || (50 * 1024 * 1024); // 50MB default
+const MAX_IMAGE_LENGTH = (process.env.MAX_IMAGE_LENGTH && !isNaN(parseInt(process.env.MAX_IMAGE_LENGTH, 10))) 
+    ? parseInt(process.env.MAX_IMAGE_LENGTH, 10) 
+    : (50 * 1024 * 1024); // 50MB default
 
 // Увеличиваем лимит для загрузки больших изображений
 // Используем 50mb для express.json чтобы покрыть base64 инфляцию (~33% оверхед)
