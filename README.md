@@ -248,6 +248,6 @@ MIT
 Мы приветствуем вклад в развитие проекта! Если вы хотите добавить новые функции или исправить ошибки:
 1. Форкните репозиторий
 2. Создайте ветку для вашей функции (`git checkout -b feature/AmazingFeature`)
-3. Закоммитьте изменения (`git commit -m 'Add some AmazingFeature'`)
+3. Закоммитите изменения (`git commit -m 'Add some AmazingFeature'`)
 4. Запушьте в ветку (`git push origin feature/AmazingFeature`)
 5. Откройте Pull Request
