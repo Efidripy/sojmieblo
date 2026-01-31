@@ -11,9 +11,11 @@ YELLOW="\033[0;33m"
 NC="\033[0m" # No Color
 
 # Define Application and Log Directories
-APP_DIR="/var/www/sojmieblo"
+BACKEND_DIR="/opt/sojmieblo"
+FRONTEND_DIR="/var/www/sojmieblo"
+APP_DIR="/opt/sojmieblo"  # Keep for backward compatibility
 LOG_DIR="/var/log/sojmieblo"
-MARKER_FILE="/var/www/sojmieblo/.deployed"
+MARKER_FILE="/opt/sojmieblo/.deployed"
 
 # Create log directory if it doesn't exist
 mkdir -p $LOG_DIR
@@ -58,6 +60,212 @@ install_nodejs() {
     echo -e "${GREEN}[OK] ${NC}Node.js $(node --version) и npm $(npm --version) установлены успешно"
 }
 
+# Function to configure Nginx
+configure_nginx() {
+    echo -e "${YELLOW}[INFO] ${NC}Настройка Nginx..."
+    echo ""
+    echo "Выберите как настроить Nginx:"
+    echo "1) Добавить location блок в существующий конфиг"
+    echo "2) Создать новый конфиг для Sojmieblo"
+    echo "3) Пропустить настройку Nginx"
+    read -p "Ваш выбор [1-3]: " nginx_choice
+    
+    case $nginx_choice in
+        1)
+            add_to_existing_nginx
+            ;;
+        2)
+            create_new_nginx_config
+            ;;
+        3)
+            log_message "Nginx configuration skipped"
+            echo -e "${YELLOW}[INFO] ${NC}Настройка Nginx пропущена"
+            return 0
+            ;;
+        *)
+            echo "Неверный выбор, пропускаем Nginx"
+            log_message "Invalid Nginx choice, skipped"
+            return 0
+            ;;
+    esac
+}
+
+# Function to add location block to existing Nginx config
+add_to_existing_nginx() {
+    echo ""
+    echo "Доступные Nginx конфиги:"
+    
+    # List all configs
+    configs=()
+    i=1
+    for conf in /etc/nginx/sites-available/*; do
+        if [ -f "$conf" ]; then
+            basename=$(basename "$conf")
+            echo "$i) $basename"
+            configs+=("$conf")
+            ((i++))
+        fi
+    done
+    
+    if [ ${#configs[@]} -eq 0 ]; then
+        echo "Нет доступных конфигов. Создайте новый."
+        create_new_nginx_config
+        return
+    fi
+    
+    read -p "Выберите номер конфига [1-${#configs[@]}]: " conf_num
+    
+    # Validate input
+    if ! [[ "$conf_num" =~ ^[0-9]+$ ]] || [ "$conf_num" -lt 1 ] || [ "$conf_num" -gt ${#configs[@]} ]; then
+        error_exit "Неверный номер конфига"
+    fi
+    
+    selected_conf="${configs[$((conf_num-1))]}"
+    echo "Выбран: $(basename $selected_conf)"
+    
+    # Ask for location path
+    read -p "Введите путь location (например /sojmieblo или /): " location_path
+    location_path=${location_path:-/sojmieblo}
+    
+    # Backup original config
+    cp "$selected_conf" "${selected_conf}.backup_$(date +%Y%m%d_%H%M%S)"
+    
+    # Create location block with markers
+    location_block="    # Sojmieblo proxy - START
+    location $location_path {
+        proxy_pass http://127.0.0.1:777;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    # Sojmieblo proxy - END"
+    
+    # Insert before last } in file
+    # Use awk to insert before last closing brace (handles indentation)
+    awk -v block="$location_block" '
+        /^[[:space:]]*}[[:space:]]*$/ && !found {
+            print block
+            found=1
+        }
+        {print}
+    ' "$selected_conf" > "${selected_conf}.tmp" && mv "${selected_conf}.tmp" "$selected_conf"
+    
+    # Test nginx config
+    if nginx -t 2>&1 | tee -a $LOG_DIR/deploy.log; then
+        systemctl reload nginx
+        echo -e "${GREEN}[OK] ${NC}Location блок добавлен в $(basename $selected_conf)"
+        echo "Путь: $location_path -> http://127.0.0.1:777"
+        log_message "Nginx location added to $selected_conf at $location_path"
+    else
+        # Restore backup - find the most recent backup
+        latest_backup=$(ls -t "${selected_conf}.backup_"* 2>/dev/null | head -1)
+        if [ -n "$latest_backup" ]; then
+            mv "$latest_backup" "$selected_conf"
+            echo -e "${RED}[ERROR] ${NC}Nginx конфигурация содержит ошибки. Восстановлена резервная копия."
+            log_message "Nginx config test failed, backup restored"
+        fi
+        error_exit "Nginx конфигурация содержит ошибки."
+    fi
+}
+
+# Function to create new Nginx config
+create_new_nginx_config() {
+    read -p "Введите доменное имя для нового конфига: " DOMAIN
+    
+    if [ -z "$DOMAIN" ]; then
+        echo "Доменное имя не указано, пропускаем."
+        log_message "Domain name not provided, Nginx config creation skipped"
+        return 0
+    fi
+    
+    cat <<EOL >/etc/nginx/sites-available/sojmieblo
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    # Frontend static files
+    root $FRONTEND_DIR;
+    index index.html;
+
+    # Serve static files directly
+    location / {
+        try_files \$uri \$uri/ @backend;
+    }
+
+    # Sojmieblo proxy - START
+    # Proxy API requests to backend
+    location @backend {
+        proxy_pass http://127.0.0.1:777;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    # Sojmieblo proxy - END
+}
+EOL
+
+    ln -sf /etc/nginx/sites-available/sojmieblo /etc/nginx/sites-enabled/
+    
+    if nginx -t 2>&1 | tee -a $LOG_DIR/deploy.log; then
+        systemctl reload nginx
+        echo -e "${GREEN}[OK] ${NC}Новый Nginx конфиг создан для $DOMAIN"
+        log_message "New Nginx config created for $DOMAIN"
+    else
+        rm -f /etc/nginx/sites-available/sojmieblo
+        rm -f /etc/nginx/sites-enabled/sojmieblo
+        error_exit "Nginx конфигурация содержит ошибки"
+    fi
+}
+
+# Function for full uninstall
+full_uninstall() {
+    echo -e "${YELLOW}[WARNING] ${NC}Это удалит ВСЕ компоненты Sojmieblo!"
+    read -p "Вы уверены? Введите 'YES' для подтверждения: " confirm
+    
+    if [ "$confirm" != "YES" ]; then
+        echo "Удаление отменено."
+        exit 0
+    fi
+    
+    echo -e "${YELLOW}[INFO] ${NC}Полное удаление Sojmieblo..."
+    
+    # Stop and remove service (ignore errors)
+    systemctl stop sojmieblo.service 2>/dev/null || true
+    systemctl disable sojmieblo.service 2>/dev/null || true
+    rm -f /etc/systemd/system/sojmieblo.service 2>/dev/null || true
+    systemctl daemon-reload 2>/dev/null || true
+    
+    # Remove Nginx configs (ignore errors)
+    rm -f /etc/nginx/sites-enabled/sojmieblo 2>/dev/null || true
+    rm -f /etc/nginx/sites-available/sojmieblo 2>/dev/null || true
+    
+    # Remove Nginx location blocks from existing configs
+    if [ -d /etc/nginx/sites-available ]; then
+        for conf in /etc/nginx/sites-available/*; do
+            if [ -f "$conf" ] && grep -q "# Sojmieblo proxy" "$conf" 2>/dev/null; then
+                echo "Удаление Sojmieblo блока из $(basename $conf)"
+                # Remove lines between markers
+                sed -i '/# Sojmieblo proxy - START/,/# Sojmieblo proxy - END/d' "$conf" || true
+            fi
+        done
+    fi
+    
+    systemctl reload nginx 2>/dev/null || true
+    
+    # Remove directories (ignore errors)
+    rm -rf $BACKEND_DIR 2>/dev/null || true
+    rm -rf $FRONTEND_DIR 2>/dev/null || true
+    rm -rf $LOG_DIR 2>/dev/null || true
+    
+    echo -e "${GREEN}[OK] ${NC}Полное удаление завершено!"
+    log_message "Full uninstall completed" 2>/dev/null || true
+    exit 0
+}
+
 # Check if application is already installed
 check_existing_installation() {
     if [ -f "$MARKER_FILE" ]; then
@@ -68,7 +276,8 @@ check_existing_installation() {
         echo "1) Переустановить (удалить и установить заново)"
         echo "2) Обновить (обновить код из репозитория)"
         echo "3) Отменить установку"
-        read -p "Ваш выбор [1-3]: " choice
+        echo "4) Полное удаление (удалить все компоненты Sojmieblo)"
+        read -p "Ваш выбор [1-4]: " choice
         
         case $choice in
             1)
@@ -84,6 +293,10 @@ check_existing_installation() {
                 log_message "Установка отменена пользователем"
                 echo "Установка отменена."
                 exit 0
+                ;;
+            4)
+                log_message "Пользователь выбрал полное удаление"
+                full_uninstall
                 ;;
             *)
                 error_exit "Неверный выбор. Установка отменена."
@@ -109,8 +322,9 @@ remove_existing_installation() {
     rm -f /etc/nginx/sites-available/sojmieblo
     systemctl reload nginx 2>/dev/null || true
     
-    # Remove application directory (this also removes the marker file inside)
-    rm -rf $APP_DIR
+    # Remove application directories
+    rm -rf $BACKEND_DIR
+    rm -rf $FRONTEND_DIR
     
     log_message "Существующая установка удалена"
     echo -e "${GREEN}[OK] ${NC}Существующая установка удалена"
@@ -120,12 +334,10 @@ remove_existing_installation() {
 update_existing_installation() {
     echo -e "${YELLOW}[INFO] ${NC}Обновление существующей установки..."
     
-    # Check if directory exists
-    if [ ! -d "$APP_DIR" ]; then
-        error_exit "Директория приложения не найдена: $APP_DIR"
+    # Check if backend directory exists
+    if [ ! -d "$BACKEND_DIR" ]; then
+        error_exit "Директория приложения не найдена: $BACKEND_DIR"
     fi
-    
-    cd $APP_DIR || error_exit "Не удалось перейти в директорию $APP_DIR"
     
     # Stop service
     systemctl stop sojmieblo.service || error_exit "Не удалось остановить сервис"
@@ -133,14 +345,31 @@ update_existing_installation() {
     # Backup current version
     BACKUP_DIR="/tmp/sojmieblo_backup_$(date +%Y%m%d_%H%M%S)"
     mkdir -p $BACKUP_DIR
-    cp -r $APP_DIR/. $BACKUP_DIR/ || log_message "Warning: Backup creation failed"
+    cp -r $BACKEND_DIR/. $BACKUP_DIR/backend/ 2>/dev/null || log_message "Warning: Backend backup creation failed"
+    cp -r $FRONTEND_DIR/. $BACKUP_DIR/frontend/ 2>/dev/null || log_message "Warning: Frontend backup creation failed"
     log_message "Backup created at $BACKUP_DIR"
     
-    # Pull latest changes
-    git pull origin main || error_exit "Не удалось обновить код из репозитория"
+    # Clone to temporary location
+    TEMP_CLONE="/tmp/sojmieblo_update_$$"
+    git clone https://github.com/Efidripy/sojmieblo.git $TEMP_CLONE || error_exit "Не удалось клонировать репозиторий"
+    
+    # Update backend files
+    cp $TEMP_CLONE/server.js $BACKEND_DIR/
+    cp $TEMP_CLONE/package.json $BACKEND_DIR/
+    cp $TEMP_CLONE/package-lock.json $BACKEND_DIR/ 2>/dev/null || true
+    
+    # Update frontend files
+    cp -r $TEMP_CLONE/public/. $FRONTEND_DIR/ || error_exit "Failed to copy frontend files"
+    
+    # Cleanup temp
+    rm -rf $TEMP_CLONE
     
     # Update dependencies
+    cd $BACKEND_DIR || error_exit "Не удалось перейти в директорию $BACKEND_DIR"
     npm install --production || error_exit "Не удалось установить зависимости"
+    
+    # Update server.js to use new frontend path
+    sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js || error_exit "Failed to update frontend path in server.js"
     
     # Restart service
     systemctl start sojmieblo.service || error_exit "Не удалось запустить сервис"
@@ -162,9 +391,35 @@ fi
 # Check existing installation
 check_existing_installation
 
-# Step 1: Git Clone
-log_message "Cloning repository..."
-git clone https://github.com/Efidripy/sojmieblo.git $APP_DIR || error_exit "Git clone failed"
+# Step 1: Setup backend and frontend directories
+log_message "Setting up backend and frontend directories..."
+
+# Create directories
+mkdir -p $BACKEND_DIR
+mkdir -p $FRONTEND_DIR
+
+# Clone repository to temp location
+TEMP_CLONE="/tmp/sojmieblo_clone_$$"
+git clone https://github.com/Efidripy/sojmieblo.git $TEMP_CLONE || error_exit "Git clone failed"
+
+# Copy backend files
+cp $TEMP_CLONE/server.js $BACKEND_DIR/
+cp $TEMP_CLONE/package.json $BACKEND_DIR/
+cp $TEMP_CLONE/package-lock.json $BACKEND_DIR/ 2>/dev/null || true
+
+# Copy frontend files
+cp -r $TEMP_CLONE/public/. $FRONTEND_DIR/ || error_exit "Failed to copy frontend files"
+
+# Get git commit for version tracking
+cd $TEMP_CLONE
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+cd -
+
+# Cleanup temp
+rm -rf $TEMP_CLONE
+
+log_message "Backend and frontend files copied successfully"
+echo -e "${GREEN}[OK] ${NC}Файлы скопированы в $BACKEND_DIR и $FRONTEND_DIR"
 
 # Step 2: Check and Install Node.js
 log_message "Checking Node.js installation..."
@@ -204,27 +459,32 @@ fi
 
 # Step 3: Install application dependencies
 log_message "Installing application dependencies..."
-cd $APP_DIR || error_exit "Failed to change directory to $APP_DIR"
+cd $BACKEND_DIR || error_exit "Failed to change directory to $BACKEND_DIR"
 npm install --production || error_exit "Failed to install npm dependencies"
 log_message "Application dependencies installed successfully"
 
-# Step 4: Modify server.js
+# Step 4: Modify server.js to use new frontend path
 log_message "Modifying server.js..."
-sed -i 's/const port = .*;/const port = 777;/' $APP_DIR/server.js || error_exit "Failed to modify server.js"
-sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $APP_DIR/server.js || error_exit "Failed to modify hostname in server.js"
+sed -i 's/const port = .*;/const port = 777;/' $BACKEND_DIR/server.js || error_exit "Failed to modify server.js"
+# Hostname modification is optional - some versions may not have this line
+sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $BACKEND_DIR/server.js 2>/dev/null || log_message "Hostname line not found in server.js (skipping)"
+sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js || error_exit "Failed to update frontend path in server.js"
 
 # Step 5: Create Systemd Service
 log_message "Creating systemd service..."
 cat <<EOL >/etc/systemd/system/sojmieblo.service
 [Unit]
-Description=Sojmieblo Node.js App
+Description=Sojmieblo Node.js Backend
 After=network.target
 
 [Service]
 Environment=NODE_ENV=production
-WorkingDirectory=$APP_DIR
-ExecStart=/usr/bin/node $APP_DIR/server.js
+Environment=FRONTEND_PATH=$FRONTEND_DIR
+WorkingDirectory=$BACKEND_DIR
+ExecStart=/usr/bin/node $BACKEND_DIR/server.js
 Restart=always
+User=www-data
+Group=www-data
 
 [Install]
 WantedBy=multi-user.target
@@ -233,34 +493,15 @@ EOL
 systemctl enable sojmieblo.service || error_exit "Failed to enable service"
 
 # Step 6: Nginx Configuration
-log_message "Configuring Nginx..."
-read -p "Please enter your domain name: " DOMAIN
-cat <<EOL >/etc/nginx/sites-available/sojmieblo
-server {
-    listen 80;
-    server_name $DOMAIN;
-
-    location / {
-        proxy_pass http://127.0.0.1:777;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-EOL
-
-ln -s /etc/nginx/sites-available/sojmieblo /etc/nginx/sites-enabled/ || error_exit "Failed to create symlink for Nginx"
+configure_nginx
 
 # Step 7: Restart Services
 log_message "Restarting Nginx and Sojmieblo service..."
-systemctl restart nginx || error_exit "Failed to restart Nginx"
+systemctl restart nginx 2>/dev/null || log_message "Warning: Failed to restart Nginx (may not be configured)"
 systemctl start sojmieblo.service || error_exit "Failed to start Sojmieblo service"
 
 # Create marker file to indicate successful installation
 echo "Installed: $(date)" > $MARKER_FILE
-GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 echo "Version: $GIT_COMMIT" >> $MARKER_FILE
 log_message "Deployment marker created at $MARKER_FILE"
 
@@ -272,7 +513,8 @@ echo -e "${GREEN}   Установка завершена успешно!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "Информация об установке:"
-echo "  - Директория приложения: $APP_DIR"
+echo "  - Backend директория: $BACKEND_DIR"
+echo "  - Frontend директория: $FRONTEND_DIR"
 echo "  - Node.js версия: $(node --version)"
 echo "  - npm версия: $(npm --version)"
 echo "  - Git коммит: $GIT_COMMIT"
