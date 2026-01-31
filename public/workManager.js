@@ -8,17 +8,11 @@ class WorkManager {
     // Сохранить текущую работу
     async saveWork(canvasElement) {
         try {
-            // CRITICAL: Force WebGL to finish rendering
+            // ИСПРАВЛЕНИЕ: Убрать draw(texture).update() перед gl.readPixels() - это перезаписывает визуальное состояние
+            // Вместо этого используем gl.finish() для завершения рендеринга и читаем текущие пиксели
             const gl = canvasElement._.gl;
             
-            // Ensure texture is drawn
-            // Note: 'texture' is a global variable defined in app.js
-            // It holds the current image texture loaded into the glfx canvas
-            if (typeof texture !== 'undefined' && texture) {
-                canvasElement.draw(texture).update();
-            }
-            
-            // Force GPU to complete all operations
+            // Завершаем все операции GPU перед чтением пикселей
             gl.finish();
             
             // Read pixels directly from WebGL buffer
