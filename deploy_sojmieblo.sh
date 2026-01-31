@@ -226,9 +226,12 @@ add_to_existing_nginx() {
     cp "$selected_conf" "${selected_conf}.backup_$(date +%Y%m%d_%H%M%S)"
     
     # Create location block with markers using current port
-    location_block="    # Sojmieblo API - START
+    location_block="    # Sojmieblo configuration - START
+    client_max_body_size 50M;
+    
+    # Sojmieblo API
     location /api/ {
-        proxy_pass http://127.0.0.1:${current_port};
+        proxy_pass http://127.0.0.1:${current_port}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -237,9 +240,8 @@ add_to_existing_nginx() {
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_cache_bypass \$http_upgrade;
     }
-    # Sojmieblo API - END
-
-    # Sojmieblo proxy - START
+    
+    # Sojmieblo proxy
     location $location_path {
         proxy_pass http://127.0.0.1:${current_port}/;
         proxy_http_version 1.1;
@@ -248,7 +250,7 @@ add_to_existing_nginx() {
         proxy_set_header Host \$host;
         proxy_cache_bypass \$http_upgrade;
     }
-    # Sojmieblo proxy - END"
+    # Sojmieblo configuration - END"
     
     # Insert before last } in file
     # Use awk to insert before last closing brace (handles indentation)
@@ -294,6 +296,9 @@ create_new_nginx_config() {
 server {
     listen 80;
     server_name $DOMAIN;
+    
+    # Allow large uploads
+    client_max_body_size 50M;
 
     # Frontend static files
     root $FRONTEND_DIR;
@@ -307,7 +312,7 @@ server {
     # Sojmieblo proxy - START
     # Proxy API requests to backend
     location @backend {
-        proxy_pass http://127.0.0.1:${current_port};
+        proxy_pass http://127.0.0.1:${current_port}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -372,9 +377,13 @@ full_uninstall() {
     # Удаляем Nginx location blocks from existing configs
     if [ -d /etc/nginx/sites-available ]; then
         for conf in /etc/nginx/sites-available/*; do
-            if [ -f "$conf" ] && grep -q "# Sojmieblo proxy" "$conf" 2>/dev/null; then
-                echo "Удаление Sojmieblo блока из $(basename $conf)"
+            if [ -f "$conf" ] && grep -q "# Sojmieblo configuration" "$conf" 2>/dev/null; then
+                echo "Удаление Sojmieblo блока (новый формат) из $(basename $conf)"
                 # Remove lines between markers
+                sed -i '/# Sojmieblo configuration - START/,/# Sojmieblo configuration - END/d' "$conf" || true
+            elif [ -f "$conf" ] && grep -q "# Sojmieblo proxy" "$conf" 2>/dev/null; then
+                echo "Удаление Sojmieblo блока (старый формат) из $(basename $conf)"
+                # Remove lines between markers (old format)
                 sed -i '/# Sojmieblo proxy - START/,/# Sojmieblo proxy - END/d' "$conf" || true
             fi
         done
@@ -560,6 +569,9 @@ update_application() {
         cp "$TEMP_CLONE/package.json" "$BACKEND_DIR/"
         cp "$TEMP_CLONE/package-lock.json" "$BACKEND_DIR/" 2>/dev/null || true
         
+        # Copy utils directory
+        cp -r "$TEMP_CLONE/utils" "$BACKEND_DIR/" || handle_error "Не удалось обновить директорию utils"
+        
         # Если package.json изменился, обновляем зависимости
         if [ "$package_changed" -eq 1 ]; then
             log_message "Обнаружены изменения в package.json, обновление зависимостей..."
@@ -669,6 +681,9 @@ git clone https://github.com/Efidripy/sojmieblo.git $TEMP_CLONE || error_exit "G
 cp $TEMP_CLONE/server.js $BACKEND_DIR/
 cp $TEMP_CLONE/package.json $BACKEND_DIR/
 cp $TEMP_CLONE/package-lock.json $BACKEND_DIR/ 2>/dev/null || true
+
+# Copy utils directory
+cp -r $TEMP_CLONE/utils $BACKEND_DIR/ || error_exit "Failed to copy utils directory"
 
 # Copy frontend files
 cp -r $TEMP_CLONE/public/. $FRONTEND_DIR/ || error_exit "Failed to copy frontend files"
