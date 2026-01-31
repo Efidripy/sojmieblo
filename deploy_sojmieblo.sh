@@ -143,9 +143,9 @@ add_to_existing_nginx() {
     # Sojmieblo proxy - END"
     
     # Insert before last } in file
-    # Use awk to insert before last }
+    # Use awk to insert before last closing brace (handles indentation)
     awk -v block="$location_block" '
-        /^}/ && !found {
+        /^[[:space:]]*}[[:space:]]*$/ && !found {
             print block
             found=1
         }
@@ -359,7 +359,7 @@ update_existing_installation() {
     cp $TEMP_CLONE/package-lock.json $BACKEND_DIR/ 2>/dev/null || true
     
     # Update frontend files
-    cp -r $TEMP_CLONE/public/* $FRONTEND_DIR/
+    cp -r $TEMP_CLONE/public/. $FRONTEND_DIR/ || error_exit "Failed to copy frontend files"
     
     # Cleanup temp
     rm -rf $TEMP_CLONE
@@ -369,7 +369,7 @@ update_existing_installation() {
     npm install --production || error_exit "Не удалось установить зависимости"
     
     # Update server.js to use new frontend path
-    sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js
+    sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js || error_exit "Failed to update frontend path in server.js"
     
     # Restart service
     systemctl start sojmieblo.service || error_exit "Не удалось запустить сервис"
@@ -408,7 +408,7 @@ cp $TEMP_CLONE/package.json $BACKEND_DIR/
 cp $TEMP_CLONE/package-lock.json $BACKEND_DIR/ 2>/dev/null || true
 
 # Copy frontend files
-cp -r $TEMP_CLONE/public/* $FRONTEND_DIR/
+cp -r $TEMP_CLONE/public/. $FRONTEND_DIR/ || error_exit "Failed to copy frontend files"
 
 # Get git commit for version tracking
 cd $TEMP_CLONE
@@ -466,7 +466,8 @@ log_message "Application dependencies installed successfully"
 # Step 4: Modify server.js to use new frontend path
 log_message "Modifying server.js..."
 sed -i 's/const port = .*;/const port = 777;/' $BACKEND_DIR/server.js || error_exit "Failed to modify server.js"
-sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $BACKEND_DIR/server.js || true
+# Hostname modification is optional - some versions may not have this line
+sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $BACKEND_DIR/server.js 2>/dev/null || log_message "Hostname line not found in server.js (skipping)"
 sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js || error_exit "Failed to update frontend path in server.js"
 
 # Step 5: Create Systemd Service
