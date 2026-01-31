@@ -378,11 +378,11 @@ full_uninstall() {
     if [ -d /etc/nginx/sites-available ]; then
         for conf in /etc/nginx/sites-available/*; do
             if [ -f "$conf" ] && grep -q "# Sojmieblo configuration" "$conf" 2>/dev/null; then
-                echo "Удаление Sojmieblo блока из $(basename $conf)"
+                echo "Удаление Sojmieblo блока (новый формат) из $(basename $conf)"
                 # Remove lines between markers
                 sed -i '/# Sojmieblo configuration - START/,/# Sojmieblo configuration - END/d' "$conf" || true
             elif [ -f "$conf" ] && grep -q "# Sojmieblo proxy" "$conf" 2>/dev/null; then
-                echo "Удаление Sojmieblo блока из $(basename $conf)"
+                echo "Удаление Sojmieblo блока (старый формат) из $(basename $conf)"
                 # Remove lines between markers (old format)
                 sed -i '/# Sojmieblo proxy - START/,/# Sojmieblo proxy - END/d' "$conf" || true
             fi
