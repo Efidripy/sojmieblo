@@ -376,6 +376,8 @@ function applyDeformation(x, y) {
     try {
         // Используем brushRadius напрямую
         // Центр деформации всегда под курсором (x, y)
+        // CRITICAL: Load current canvas state into texture before applying new deformation
+        // This allows deformations to accumulate/stack instead of replacing each other
         texture.loadContentsOf(canvas);
         canvas.draw(texture)
             .bulgePinch(x, y, brushRadius, deformationStrength)
