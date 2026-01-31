@@ -151,7 +151,7 @@ install_app() {
     if [ -d "$INSTALL_DIR/.git" ]; then
         echo -e "${BLUE}🔄 Updating existing installation...${NC}"
         cd "$INSTALL_DIR"
-        # Reset local changes to avoid merge conflicts
+        # Reset local changes (including version number from previous install) to avoid merge conflicts
         git reset --hard HEAD
         git pull origin main
     else
