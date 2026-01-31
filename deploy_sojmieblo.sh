@@ -24,6 +24,51 @@ log_message() {
     echo -e "${GREEN}[INFO] ${NC}$(date) - $1" >> $LOG_DIR/deploy.log
 }
 
+# Определение текущего порта
+get_current_port() {
+    local port=""
+    
+    # 1. Попытка получить порт из systemd service
+    if systemctl is-active --quiet sojmieblo; then
+        port=$(systemctl show sojmieblo -p Environment --value 2>/dev/null | grep -oP 'PORT=\K\d+')
+    fi
+    
+    # 2. Попытка получить порт из server.js
+    if [ -z "$port" ] && [ -f "$BACKEND_DIR/server.js" ]; then
+        port=$(grep -oP 'PORT\s*=\s*process\.env\.PORT\s*\|\|\s*\K\d+' "$BACKEND_DIR/server.js" | head -1)
+    fi
+    
+    # 3. Попытка получить порт из .deployed маркера
+    if [ -z "$port" ] && [ -f "$MARKER_FILE" ]; then
+        port=$(grep -oP '^Port:\s*\K\d+' "$MARKER_FILE")
+    fi
+    
+    # 4. Порт по умолчанию
+    if [ -z "$port" ]; then
+        port="3000"
+    fi
+    
+    echo "$port"
+}
+
+# Сохранение информации о развертывании
+save_deployment_info() {
+    local commit_hash=$(cd "$BACKEND_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    local node_version=$(node --version 2>/dev/null || echo "unknown")
+    local current_port=$(get_current_port)
+    
+    cat > "$MARKER_FILE" << EOF
+Installed: $(date)
+Commit: ${commit_hash}
+Node: ${node_version}
+Port: ${current_port}
+Backend: ${BACKEND_DIR}
+Frontend: ${FRONTEND_DIR}
+EOF
+    
+    log_message "Информация о развертывании сохранена (порт: ${current_port})"
+}
+
 error_exit() {
     echo -e "${RED}[ERROR] ${NC}$1" >> $LOG_DIR/deploy.log
     exit 1
@@ -221,29 +266,45 @@ EOL
     fi
 }
 
-# Function for full uninstall
+# Полное удаление всех компонентов Sojmieblo
 full_uninstall() {
-    echo -e "${YELLOW}[WARNING] ${NC}Это удалит ВСЕ компоненты Sojmieblo!"
-    read -p "Вы уверены? Введите 'YES' для подтверждения: " confirm
+    echo ""
+    echo "========================================="
+    echo "ВНИМАНИЕ: ПОЛНОЕ УДАЛЕНИЕ SOJMIEBLO"
+    echo "========================================="
+    echo "Это действие удалит:"
+    echo "  - Backend приложение ($BACKEND_DIR)"
+    echo "  - Frontend файлы ($FRONTEND_DIR)"
+    echo "  - Все сохраненные работы ($BACKEND_DIR/works)"
+    echo "  - Systemd сервис"
+    echo "  - Nginx конфигурацию"
+    echo "  - Node.js (опционально)"
+    echo ""
+    read -p "Введите 'YES' (заглавными буквами) для подтверждения: " confirm
     
     if [ "$confirm" != "YES" ]; then
-        echo "Удаление отменено."
+        log_message "Полное удаление отменено"
         exit 0
     fi
     
-    echo -e "${YELLOW}[INFO] ${NC}Полное удаление Sojmieblo..."
+    log_message "Начало полного удаления Sojmieblo..."
     
-    # Stop and remove service (ignore errors)
-    systemctl stop sojmieblo.service 2>/dev/null || true
-    systemctl disable sojmieblo.service 2>/dev/null || true
-    rm -f /etc/systemd/system/sojmieblo.service 2>/dev/null || true
-    systemctl daemon-reload 2>/dev/null || true
+    # Останавливаем и удаляем systemd сервис
+    log_message "Удаление systemd сервиса..."
+    systemctl stop sojmieblo 2>/dev/null || true
+    systemctl disable sojmieblo 2>/dev/null || true
+    rm -f /etc/systemd/system/sojmieblo.service
+    systemctl daemon-reload
     
-    # Remove Nginx configs (ignore errors)
-    rm -f /etc/nginx/sites-enabled/sojmieblo 2>/dev/null || true
-    rm -f /etc/nginx/sites-available/sojmieblo 2>/dev/null || true
+    # Удаляем Nginx конфигурацию (по маркерам)
+    log_message "Удаление Nginx конфигурации..."
+    if [ -f /etc/nginx/nginx.conf ]; then
+        # Удаляем блок между маркерами
+        sed -i '/# BEGIN SOJMIEBLO CONFIG/,/# END SOJMIEBLO CONFIG/d' /etc/nginx/nginx.conf 2>/dev/null || true
+        nginx -t 2>/dev/null && systemctl reload nginx 2>/dev/null || true
+    fi
     
-    # Remove Nginx location blocks from existing configs
+    # Удаляем Nginx location blocks from existing configs
     if [ -d /etc/nginx/sites-available ]; then
         for conf in /etc/nginx/sites-available/*; do
             if [ -f "$conf" ] && grep -q "# Sojmieblo proxy" "$conf" 2>/dev/null; then
@@ -254,24 +315,62 @@ full_uninstall() {
         done
     fi
     
+    # Remove site configs
+    rm -f /etc/nginx/sites-enabled/sojmieblo 2>/dev/null || true
+    rm -f /etc/nginx/sites-available/sojmieblo 2>/dev/null || true
+    
     systemctl reload nginx 2>/dev/null || true
     
-    # Remove directories (ignore errors)
-    rm -rf $BACKEND_DIR 2>/dev/null || true
-    rm -rf $FRONTEND_DIR 2>/dev/null || true
+    # Удаляем backend директорию (включая works)
+    if [ -d "$BACKEND_DIR" ]; then
+        log_message "Удаление backend директории (включая сохраненные работы)..."
+        rm -rf "$BACKEND_DIR" || true
+    fi
+    
+    # Удаляем frontend директорию
+    if [ -d "$FRONTEND_DIR" ]; then
+        log_message "Удаление frontend директории..."
+        rm -rf "$FRONTEND_DIR" || true
+    fi
+    
+    # Удаляем родительскую директорию если пуста
+    if [ -d "$(dirname "$BACKEND_DIR")" ]; then
+        rmdir "$(dirname "$BACKEND_DIR")" 2>/dev/null || true
+    fi
+    
+    # Удаляем логи
     rm -rf $LOG_DIR 2>/dev/null || true
     
-    echo -e "${GREEN}[OK] ${NC}Полное удаление завершено!"
-    log_message "Full uninstall completed" 2>/dev/null || true
+    # Удаляем маркер развертывания
+    rm -f "$MARKER_FILE" || true
+    
+    # Спрашиваем об удалении Node.js
+    echo ""
+    read -p "Удалить Node.js? (y/N): " remove_node
+    if [ "$remove_node" = "y" ] || [ "$remove_node" = "Y" ]; then
+        log_message "Удаление Node.js..."
+        apt-get remove -y nodejs npm 2>/dev/null || true
+        apt-get autoremove -y 2>/dev/null || true
+        rm -f /etc/apt/sources.list.d/nodesource.list 2>/dev/null || true
+    fi
+    
+    log_message "Полное удаление Sojmieblo завершено"
+    echo ""
+    echo "========================================="
+    echo "Sojmieblo полностью удален из системы"
+    echo "========================================="
     exit 0
 }
 
-# Check if application is already installed
+# Проверка существующей установки
 check_existing_installation() {
     if [ -f "$MARKER_FILE" ]; then
-        echo -e "${YELLOW}[WARNING] ${NC}Sojmieblo уже установлен на этом сервере!"
-        echo "Дата предыдущей установки: $(cat $MARKER_FILE)"
+        echo "[WARNING] Sojmieblo уже установлен на этом сервере!"
+        cat "$MARKER_FILE" | while IFS= read -r line; do
+            echo "$line"
+        done
         echo ""
+        
         echo "Выберите действие:"
         echo "1) Переустановить (удалить и установить заново)"
         echo "2) Обновить (обновить код из репозитория)"
@@ -286,12 +385,11 @@ check_existing_installation() {
                 ;;
             2)
                 log_message "Пользователь выбрал обновление"
-                update_existing_installation
+                update_application
                 exit 0
                 ;;
             3)
                 log_message "Установка отменена пользователем"
-                echo "Установка отменена."
                 exit 0
                 ;;
             4)
@@ -299,7 +397,8 @@ check_existing_installation() {
                 full_uninstall
                 ;;
             *)
-                error_exit "Неверный выбор. Установка отменена."
+                log_message "Неверный выбор, установка отменена"
+                exit 1
                 ;;
         esac
     fi
@@ -330,56 +429,130 @@ remove_existing_installation() {
     echo -e "${GREEN}[OK] ${NC}Существующая установка удалена"
 }
 
-# Update existing installation
-update_existing_installation() {
-    echo -e "${YELLOW}[INFO] ${NC}Обновление существующей установки..."
+# Handle error function for update_application and setup_systemd_service
+handle_error() {
+    echo -e "${RED}[ERROR] ${NC}$1"
+    log_message "ERROR: $1"
+    exit 1
+}
+
+# Обновление приложения
+update_application() {
+    log_message "Начало обновления Sojmieblo..."
     
-    # Check if backend directory exists
-    if [ ! -d "$BACKEND_DIR" ]; then
-        error_exit "Директория приложения не найдена: $BACKEND_DIR"
+    # Сохраняем текущий порт
+    local current_port=$(get_current_port)
+    log_message "Текущий порт: ${current_port}"
+    
+    # Останавливаем сервис
+    if systemctl is-active --quiet sojmieblo; then
+        log_message "Остановка сервиса..."
+        systemctl stop sojmieblo || true
     fi
     
-    # Stop service
-    systemctl stop sojmieblo.service || error_exit "Не удалось остановить сервис"
-    
-    # Backup current version
+    # Создаем резервную копию
     BACKUP_DIR="/tmp/sojmieblo_backup_$(date +%Y%m%d_%H%M%S)"
-    mkdir -p $BACKUP_DIR
-    cp -r $BACKEND_DIR/. $BACKUP_DIR/backend/ 2>/dev/null || log_message "Warning: Backend backup creation failed"
-    cp -r $FRONTEND_DIR/. $BACKUP_DIR/frontend/ 2>/dev/null || log_message "Warning: Frontend backup creation failed"
+    mkdir -p "$BACKUP_DIR"
+    cp -r "$BACKEND_DIR/." "$BACKUP_DIR/backend/" 2>/dev/null || log_message "Warning: Backend backup failed"
+    cp -r "$FRONTEND_DIR/." "$BACKUP_DIR/frontend/" 2>/dev/null || log_message "Warning: Frontend backup failed"
     log_message "Backup created at $BACKUP_DIR"
     
-    # Clone to temporary location
+    # Клонируем во временную директорию
     TEMP_CLONE="/tmp/sojmieblo_update_$$"
-    git clone https://github.com/Efidripy/sojmieblo.git $TEMP_CLONE || error_exit "Не удалось клонировать репозиторий"
+    git clone https://github.com/Efidripy/sojmieblo.git "$TEMP_CLONE" || handle_error "Не удалось клонировать репозиторий"
     
-    # Update backend files
-    cp $TEMP_CLONE/server.js $BACKEND_DIR/
-    cp $TEMP_CLONE/package.json $BACKEND_DIR/
-    cp $TEMP_CLONE/package-lock.json $BACKEND_DIR/ 2>/dev/null || true
+    # Проверяем изменения в package.json перед обновлением
+    local package_changed=0
+    if [ -f "$BACKEND_DIR/package.json" ] && [ -f "$TEMP_CLONE/package.json" ]; then
+        if ! diff -q "$BACKEND_DIR/package.json" "$TEMP_CLONE/package.json" > /dev/null 2>&1; then
+            package_changed=1
+        fi
+    fi
     
-    # Update frontend files
-    cp -r $TEMP_CLONE/public/. $FRONTEND_DIR/ || error_exit "Failed to copy frontend files"
+    # Обновляем backend
+    if [ -d "$BACKEND_DIR" ]; then
+        log_message "Обновление backend..."
+        cp "$TEMP_CLONE/server.js" "$BACKEND_DIR/"
+        cp "$TEMP_CLONE/package.json" "$BACKEND_DIR/"
+        cp "$TEMP_CLONE/package-lock.json" "$BACKEND_DIR/" 2>/dev/null || true
+        
+        # Если package.json изменился, обновляем зависимости
+        if [ "$package_changed" -eq 1 ]; then
+            log_message "Обнаружены изменения в package.json, обновление зависимостей..."
+            cd "$BACKEND_DIR"
+            npm install --production || handle_error "Не удалось обновить npm пакеты"
+        fi
+    fi
     
-    # Cleanup temp
-    rm -rf $TEMP_CLONE
+    # Обновляем frontend
+    if [ -d "$FRONTEND_DIR" ]; then
+        log_message "Обновление frontend..."
+        cp -r "$TEMP_CLONE/public/." "$FRONTEND_DIR/" || handle_error "Не удалось обновить frontend"
+    fi
     
-    # Update dependencies
-    cd $BACKEND_DIR || error_exit "Не удалось перейти в директорию $BACKEND_DIR"
-    npm install --production || error_exit "Не удалось установить зависимости"
+    # Удаляем временную директорию
+    rm -rf "$TEMP_CLONE"
     
-    # Update server.js to use new frontend path
-    sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js || error_exit "Failed to update frontend path in server.js"
+    # Обновляем server.js для использования правильного пути к frontend
+    sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" "$BACKEND_DIR/server.js" 2>/dev/null || true
     
-    # Restart service
-    systemctl start sojmieblo.service || error_exit "Не удалось запустить сервис"
+    # Сохраняем информацию о развертывании с текущим портом
+    save_deployment_info
     
-    # Update marker file
-    echo "Updated: $(date)" > $MARKER_FILE
+    # Перезапускаем сервис
+    log_message "Перезапуск сервиса..."
+    systemctl restart sojmieblo || handle_error "Не удалось перезапустить сервис"
     
-    log_message "Обновление завершено успешно"
-    echo -e "${GREEN}[OK] ${NC}Обновление завершено успешно!"
-    echo "Сервис перезапущен. Проверьте статус: sudo systemctl status sojmieblo.service"
+    # Проверяем статус
+    sleep 3
+    if systemctl is-active --quiet sojmieblo; then
+        log_message "Обновление завершено успешно!"
+        systemctl status sojmieblo --no-pager
+        echo -e "${GREEN}[OK] ${NC}Обновление завершено успешно!"
+    else
+        handle_error "Сервис не запустился после обновления"
+    fi
+}
+
+# Настройка systemd сервиса
+setup_systemd_service() {
+    local port=$(get_current_port)
+    
+    log_message "Настройка systemd сервиса (порт: ${port})..."
+    
+    cat > /etc/systemd/system/sojmieblo.service << EOF
+[Unit]
+Description=Sojmieblo - Face Deformation Web App
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${BACKEND_DIR}
+Environment="NODE_ENV=production"
+Environment="PORT=${port}"
+ExecStart=/usr/bin/node ${BACKEND_DIR}/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sojmieblo
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload || handle_error "Не удалось перезагрузить systemd"
+    systemctl enable sojmieblo || handle_error "Не удалось включить автозапуск сервиса"
+    systemctl start sojmieblo || handle_error "Не удалось запустить сервис"
+    
+    sleep 3
+    
+    if systemctl is-active --quiet sojmieblo; then
+        log_message "Systemd сервис успешно настроен и запущен на порту ${port}"
+    else
+        handle_error "Сервис не запустился"
+    fi
 }
 
 # Check if running as root
@@ -470,27 +643,8 @@ sed -i 's/const port = .*;/const port = 777;/' $BACKEND_DIR/server.js || error_e
 sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $BACKEND_DIR/server.js 2>/dev/null || log_message "Hostname line not found in server.js (skipping)"
 sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js || error_exit "Failed to update frontend path in server.js"
 
-# Step 5: Create Systemd Service
-log_message "Creating systemd service..."
-cat <<EOL >/etc/systemd/system/sojmieblo.service
-[Unit]
-Description=Sojmieblo Node.js Backend
-After=network.target
-
-[Service]
-Environment=NODE_ENV=production
-Environment=FRONTEND_PATH=$FRONTEND_DIR
-WorkingDirectory=$BACKEND_DIR
-ExecStart=/usr/bin/node $BACKEND_DIR/server.js
-Restart=always
-User=www-data
-Group=www-data
-
-[Install]
-WantedBy=multi-user.target
-EOL
-
-systemctl enable sojmieblo.service || error_exit "Failed to enable service"
+# Step 5: Setup Systemd Service
+setup_systemd_service
 
 # Step 6: Nginx Configuration
 configure_nginx
@@ -498,12 +652,9 @@ configure_nginx
 # Step 7: Restart Services
 log_message "Restarting Nginx and Sojmieblo service..."
 systemctl restart nginx 2>/dev/null || log_message "Warning: Failed to restart Nginx (may not be configured)"
-systemctl start sojmieblo.service || error_exit "Failed to start Sojmieblo service"
 
 # Create marker file to indicate successful installation
-echo "Installed: $(date)" > $MARKER_FILE
-echo "Version: $GIT_COMMIT" >> $MARKER_FILE
-log_message "Deployment marker created at $MARKER_FILE"
+save_deployment_info
 
 # Installation Summary
 log_message "Deployment completed successfully! Check the logs for more details."
@@ -518,6 +669,7 @@ echo "  - Frontend директория: $FRONTEND_DIR"
 echo "  - Node.js версия: $(node --version)"
 echo "  - npm версия: $(npm --version)"
 echo "  - Git коммит: $GIT_COMMIT"
+echo "  - Порт: $(get_current_port)"
 echo ""
 echo "Проверьте статус сервиса:"
 echo "  sudo systemctl status sojmieblo.service"
