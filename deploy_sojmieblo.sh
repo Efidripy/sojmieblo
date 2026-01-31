@@ -47,26 +47,26 @@ git clone https://github.com/Efidripy/sojmieblo.git $APP_DIR || error_exit "Git 
 # Step 2: Install Node.js
 log_message "Installing Node.js 20.x LTS..."
 
-# Удаление старых версий Node.js если есть
+# Remove old Node.js versions if present
 apt-get remove -y nodejs npm || true
 
-# Установка необходимых пакетов
+# Install required packages
 apt-get update
 apt-get install -y ca-certificates curl gnupg || error_exit "Failed to install prerequisites"
 
-# Добавление NodeSource GPG ключа
+# Add NodeSource GPG key
 mkdir -p /etc/apt/keyrings
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg || error_exit "Failed to add NodeSource GPG key"
 
-# Добавление NodeSource репозитория для Node.js 20.x
+# Add NodeSource repository for Node.js 20.x
 NODE_MAJOR=20
 echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list || error_exit "Failed to add NodeSource repository"
 
-# Установка Node.js
+# Install Node.js
 apt-get update
 apt-get install -y nodejs || error_exit "Node.js installation failed"
 
-# Проверка установки
+# Verify installation
 node --version || error_exit "Node.js installation verification failed"
 npm --version || error_exit "npm installation verification failed"
 
@@ -75,6 +75,12 @@ log_message "Node.js $(node --version) and npm $(npm --version) installed succes
 # Step 3: Install application dependencies
 log_message "Installing application dependencies..."
 cd $APP_DIR || error_exit "Failed to change directory to $APP_DIR"
+
+# Verify package.json exists
+if [ ! -f "$APP_DIR/package.json" ]; then
+    error_exit "package.json not found in $APP_DIR"
+fi
+
 npm install --production || error_exit "Failed to install npm dependencies"
 
 # Step 4: Modify server.js
