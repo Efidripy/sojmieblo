@@ -454,6 +454,14 @@ update_application() {
     TEMP_CLONE="/tmp/sojmieblo_update_$$"
     git clone https://github.com/Efidripy/sojmieblo.git "$TEMP_CLONE" || handle_error "Не удалось клонировать репозиторий"
     
+    # Проверяем изменения в package.json перед обновлением
+    local package_changed=0
+    if [ -f "$BACKEND_DIR/package.json" ] && [ -f "$TEMP_CLONE/package.json" ]; then
+        if ! diff -q "$BACKEND_DIR/package.json" "$TEMP_CLONE/package.json" > /dev/null 2>&1; then
+            package_changed=1
+        fi
+    fi
+    
     # Обновляем backend
     if [ -d "$BACKEND_DIR" ]; then
         log_message "Обновление backend..."
@@ -461,8 +469,8 @@ update_application() {
         cp "$TEMP_CLONE/package.json" "$BACKEND_DIR/"
         cp "$TEMP_CLONE/package-lock.json" "$BACKEND_DIR/" 2>/dev/null || true
         
-        # Проверяем изменения в package.json
-        if ! diff -q "$BACKUP_DIR/backend/package.json" "$BACKEND_DIR/package.json" > /dev/null 2>&1; then
+        # Если package.json изменился, обновляем зависимости
+        if [ "$package_changed" -eq 1 ]; then
             log_message "Обнаружены изменения в package.json, обновление зависимостей..."
             cd "$BACKEND_DIR"
             npm install --production || handle_error "Не удалось обновить npm пакеты"
