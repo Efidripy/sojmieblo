@@ -7,6 +7,13 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Правая панель с работами -->
+    <div id="worksSidebar" class="works-sidebar" style="display: none;">
+        <h3>Сохраненные работы</h3>
+        <div id="worksList" class="works-list"></div>
+    </div>
+
+    <!-- Основной контейнер -->
     <div class="container">
         <h1>Sojmieblo</h1>
         <p class="subtitle">Превратите селфи в мем за секунду!</p>
@@ -35,15 +42,26 @@
             
             <div class="controls">
                 <button class="reset-btn" id="resetBtn">Сбросить</button>
+                <button class="save-btn" id="saveBtn">💾 Сохранить</button>
                 <button class="change-btn" id="changeBtn">Новое фото</button>
             </div>
             <p class="instruction">Наведите и удерживайте мышь для деформации. Колесико мыши — изменить ширину кисти.</p>
         </div>
     </div>
 
+    <!-- Модальное окно для просмотра работы -->
+    <div id="workModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="modalClose">&times;</span>
+            <img id="modalImage" src="" alt="Work">
+            <button class="modal-download" id="modalDownload">⬇️ Скачать</button>
+        </div>
+    </div>
+
     <script src="glfx.js"></script>
     <script src="config.js"></script>
     <script src="imageProcessor.js"></script>
+    <script src="workManager.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
