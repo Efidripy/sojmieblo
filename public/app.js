@@ -187,9 +187,24 @@ function initializeCanvas(img) {
         // Загрузка текстуры
         texture = canvas.texture(img);
         
-        // Размер canvas по размеру изображения (превью)
-        canvas.width = img.width;
-        canvas.height = img.height;
+        // CRITICAL FIX: Scale large images to fit viewport
+        // Calculate viewport fitting scale
+        const maxWidth = window.innerWidth * 0.9;  // 90% of viewport width
+        const maxHeight = window.innerHeight * 0.8; // 80% of viewport height
+        
+        const scaleX = maxWidth / img.width;
+        const scaleY = maxHeight / img.height;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't upscale small images
+        
+        // Set canvas size (scaled to fit viewport)
+        canvas.width = Math.floor(img.width * scale);
+        canvas.height = Math.floor(img.height * scale);
+        
+        // Also set CSS size to match canvas size for proper display
+        canvas.style.width = canvas.width + 'px';
+        canvas.style.height = canvas.height + 'px';
+        
+        console.log(`Canvas initialized: ${canvas.width}x${canvas.height} (scale: ${scale.toFixed(2)})`);
         
         canvas.draw(texture).update();
         
