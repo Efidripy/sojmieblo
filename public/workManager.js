@@ -9,7 +9,18 @@ class WorkManager {
     async saveWork(canvasElement) {
         try {
             // Получаем изображение из canvas
-            const imageDataURL = canvasElement.toDataURL('image/png');
+            // CRITICAL FIX: WebGL canvas needs proper rendering before export
+            // Create temporary 2D canvas to capture WebGL content
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvasElement.width;
+            tempCanvas.height = canvasElement.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Draw WebGL canvas content to 2D canvas
+            tempCtx.drawImage(canvasElement, 0, 0);
+            
+            // Now export from the 2D canvas (will not be black)
+            const imageDataURL = tempCanvas.toDataURL('image/jpeg', 0.95);
 
             // Отправляем на сервер
             const response = await fetch('/api/save-work', {
