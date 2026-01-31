@@ -16,15 +16,26 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Инициализация FileManager
 const fileManager = new FileManager(__dirname);
+let isInitialized = false;
+
+// Middleware для проверки инициализации
+const checkInitialized = (req, res, next) => {
+    if (!isInitialized && req.path.startsWith('/api/')) {
+        return res.status(503).json({ error: 'Service is initializing, please try again in a moment' });
+    }
+    next();
+};
 
 // Инициализация при старте сервера
 (async () => {
     try {
         await fileManager.initialize();
         fileManager.startAutoCleanup(1); // Автоочистка каждый час
+        isInitialized = true;
         console.log('FileManager инициализирован');
     } catch (error) {
         console.error('Ошибка инициализации FileManager:', error);
+        console.error('Сервер продолжит работу, но функционал работ будет недоступен');
     }
 })();
 
@@ -36,6 +47,9 @@ const limiter = rateLimit({
 });
 
 app.use(limiter);
+
+// Проверка инициализации для API эндпоинтов
+app.use(checkInitialized);
 
 // Статические файлы
 app.use(express.static(path.join(__dirname, 'public')));
@@ -187,6 +201,25 @@ app.get('/', (req, res) => {
 });
 
 // Запуск сервера
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Сервер Sojmieblo запущен на http://localhost:${PORT}`);
 });
+
+// Graceful shutdown
+const gracefulShutdown = () => {
+    console.log('Получен сигнал завершения, закрываем сервер...');
+    server.close(() => {
+        console.log('HTTP сервер закрыт');
+        fileManager.stopAutoCleanup();
+        process.exit(0);
+    });
+    
+    // Форсированное завершение через 10 секунд
+    setTimeout(() => {
+        console.error('Не удалось закрыть соединения вовремя, форсируем завершение');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
