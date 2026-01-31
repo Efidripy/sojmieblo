@@ -32,6 +32,7 @@ changeBtn.addEventListener('click', () => {
     canvasContainer.style.display = 'none';
     uploadSection.style.display = 'block';
     isImageLoaded = false;
+    showHeaderOnReset();
 });
 
 // Функциональность перетаскивания файлов
@@ -140,6 +141,9 @@ async function handleFile(file) {
                 uploadSection.style.display = 'none';
                 canvasContainer.style.display = 'block';
                 isImageLoaded = true;
+                
+                // Скрыть заголовок и subtitle
+                hideHeaderOnImageLoad();
                 
                 // Сброс параметров
                 brushRadius = CONFIG.deformation.defaultBrushRadius;
@@ -388,3 +392,73 @@ window.addEventListener('load', () => {
         console.warn('glfx.js не загружен, WebGL эффекты могут не работать');
     }
 });
+
+// Добавить кнопку сохранения после инициализации canvas
+const saveBtn = document.getElementById('saveBtn');
+if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+        if (!canvas || !isImageLoaded) {
+            alert('Сначала загрузите изображение');
+            return;
+        }
+
+        try {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Сохранение...';
+            
+            await workManager.saveWork(canvas);
+            
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Сохранить';
+        } catch (error) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Сохранить';
+        }
+    });
+}
+
+// Загрузить список работ при старте
+window.addEventListener('load', () => {
+    workManager.loadWorks();
+});
+
+// Закрытие модального окна
+const modal = document.getElementById('workModal');
+const modalClose = document.getElementById('modalClose');
+
+if (modalClose) {
+    modalClose.onclick = () => workManager.closeWorkModal();
+}
+
+if (modal) {
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            workManager.closeWorkModal();
+        }
+    };
+    
+    // Закрытие по ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            workManager.closeWorkModal();
+        }
+    });
+}
+
+// Скрыть заголовок и subtitle при загрузке изображения
+function hideHeaderOnImageLoad() {
+    const header = document.querySelector('h1');
+    const subtitle = document.querySelector('.subtitle');
+    
+    if (header) header.style.display = 'none';
+    if (subtitle) subtitle.style.display = 'none';
+}
+
+// Показать заголовок при возврате к загрузке
+function showHeaderOnReset() {
+    const header = document.querySelector('h1');
+    const subtitle = document.querySelector('.subtitle');
+    
+    if (header) header.style.display = 'block';
+    if (subtitle) subtitle.style.display = 'block';
+}
