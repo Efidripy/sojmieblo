@@ -214,16 +214,31 @@ class FileManager {
         const intervalMs = intervalHours * 60 * 60 * 1000;
         
         // Первая очистка через 10 секунд после старта
-        setTimeout(() => {
+        this.cleanupTimeout = setTimeout(() => {
             this.cleanupOldFiles();
         }, 10000);
         
         // Периодическая очистка
-        setInterval(() => {
+        this.cleanupInterval = setInterval(() => {
             this.cleanupOldFiles();
         }, intervalMs);
         
         console.log(`Автоочистка файлов запущена (каждые ${intervalHours} ч)`);
+    }
+
+    /**
+     * Остановить автоочистку
+     */
+    stopAutoCleanup() {
+        if (this.cleanupTimeout) {
+            clearTimeout(this.cleanupTimeout);
+            this.cleanupTimeout = null;
+        }
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
+        console.log('Автоочистка файлов остановлена');
     }
 }
 
