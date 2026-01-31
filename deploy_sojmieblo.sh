@@ -256,7 +256,7 @@ systemctl start sojmieblo.service || error_exit "Failed to start Sojmieblo servi
 
 # Create marker file to indicate successful installation
 echo "Installed: $(date)" > $MARKER_FILE
-GIT_COMMIT=$(cd $APP_DIR && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 echo "Version: $GIT_COMMIT" >> $MARKER_FILE
 log_message "Deployment marker created at $MARKER_FILE"
 
