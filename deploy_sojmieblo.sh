@@ -226,9 +226,22 @@ add_to_existing_nginx() {
     cp "$selected_conf" "${selected_conf}.backup_$(date +%Y%m%d_%H%M%S)"
     
     # Create location block with markers using current port
-    location_block="    # Sojmieblo proxy - START
-    location $location_path {
+    location_block="    # Sojmieblo API - START
+    location /api/ {
         proxy_pass http://127.0.0.1:${current_port};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_cache_bypass \$http_upgrade;
+    }
+    # Sojmieblo API - END
+
+    # Sojmieblo proxy - START
+    location $location_path {
+        proxy_pass http://127.0.0.1:${current_port}/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
