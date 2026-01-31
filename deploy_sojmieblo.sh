@@ -429,6 +429,13 @@ remove_existing_installation() {
     echo -e "${GREEN}[OK] ${NC}Существующая установка удалена"
 }
 
+# Handle error function for update_application and setup_systemd_service
+handle_error() {
+    echo -e "${RED}[ERROR] ${NC}$1"
+    log_message "ERROR: $1"
+    exit 1
+}
+
 # Обновление приложения
 update_application() {
     log_message "Начало обновления Sojmieblo..."
@@ -505,13 +512,6 @@ update_application() {
     else
         handle_error "Сервис не запустился после обновления"
     fi
-}
-
-# Handle error function for update_application
-handle_error() {
-    echo -e "${RED}[ERROR] ${NC}$1"
-    log_message "ERROR: $1"
-    exit 1
 }
 
 # Настройка systemd сервиса
