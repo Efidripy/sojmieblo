@@ -11,11 +11,15 @@ const ImageProcessor = {
     
     // Определить оптимальный размер превью на основе размера окна браузера
     getOptimalPreviewSize() {
+        // Maximum size limit for optimal performance
+        const MAX_SIZE = 1280;
+        
         const windowWidth = window.innerWidth;
         
         for (let size of this.previewSizes) {
             if (windowWidth >= size.minWindowWidth) {
-                return size.width;
+                // Don't exceed MAX_SIZE even for large screens
+                return Math.min(size.width, MAX_SIZE);
             }
         }
         
