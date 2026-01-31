@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Deployment script for Sojmieblo application
+# Supports: Ubuntu 20.04, 22.04, 24.04 (Noble), Debian 11, 12
+# Installs: Node.js 20.x LTS, Nginx, and configures systemd service
+
 # Color Output Functions
 RED="\033[0;31m"
 GREEN="\033[0;32m"
@@ -22,21 +26,69 @@ error_exit() {
     exit 1
 }
 
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then 
+    echo "Please run as root or with sudo"
+    exit 1
+fi
+
+# Check OS compatibility
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    log_message "Detected OS: $NAME $VERSION"
+else
+    error_exit "Cannot detect OS version"
+fi
+
 # Step 1: Git Clone
 log_message "Cloning repository..."
 git clone https://github.com/Efidripy/sojmieblo.git $APP_DIR || error_exit "Git clone failed"
 
 # Step 2: Install Node.js
-log_message "Installing Node.js..."
-curl -sL https://deb.nodesource.com/setup_14.x | bash - || error_exit "Node.js setup script failed"
+log_message "Installing Node.js 20.x LTS..."
+
+# Remove old Node.js versions if present
+apt-get remove -y nodejs npm || true
+
+# Install required packages
+apt-get update
+apt-get install -y ca-certificates curl gnupg || error_exit "Failed to install prerequisites"
+
+# Add NodeSource GPG key
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg || error_exit "Failed to add NodeSource GPG key"
+
+# Add NodeSource repository for Node.js 20.x
+NODE_MAJOR=20
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list || error_exit "Failed to add NodeSource repository"
+
+# Install Node.js
+apt-get update
 apt-get install -y nodejs || error_exit "Node.js installation failed"
 
-# Step 3: Modify server.js
+# Verify installation
+node --version || error_exit "Node.js installation verification failed"
+npm --version || error_exit "npm installation verification failed"
+
+log_message "Node.js $(node --version) and npm $(npm --version) installed successfully"
+
+# Step 3: Install application dependencies
+log_message "Installing application dependencies..."
+cd $APP_DIR || error_exit "Failed to change directory to $APP_DIR"
+
+# Verify package.json exists
+if [ ! -f "$APP_DIR/package.json" ]; then
+    error_exit "package.json not found in $APP_DIR"
+fi
+
+npm install --production || error_exit "Failed to install npm dependencies"
+
+# Step 4: Modify server.js
 log_message "Modifying server.js..."
 sed -i 's/const port = .*;/const port = 777;/' $APP_DIR/server.js || error_exit "Failed to modify server.js"
 sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $APP_DIR/server.js || error_exit "Failed to modify hostname in server.js"
 
-# Step 4: Create Systemd Service
+# Step 5: Create Systemd Service
 log_message "Creating systemd service..."
 cat <<EOL >/etc/systemd/system/sojmieblo.service
 [Unit]
@@ -55,7 +107,7 @@ EOL
 
 systemctl enable sojmieblo.service || error_exit "Failed to enable service"
 
-# Step 5: Nginx Configuration
+# Step 6: Nginx Configuration
 log_message "Configuring Nginx..."
 read -p "Please enter your domain name: " DOMAIN
 cat <<EOL >/etc/nginx/sites-available/sojmieblo
@@ -76,7 +128,7 @@ EOL
 
 ln -s /etc/nginx/sites-available/sojmieblo /etc/nginx/sites-enabled/ || error_exit "Failed to create symlink for Nginx"
 
-# Step 6: Restart Services
+# Step 7: Restart Services
 log_message "Restarting Nginx and Sojmieblo service..."
 systemctl restart nginx || error_exit "Failed to restart Nginx"
 systemctl start sojmieblo.service || error_exit "Failed to start Sojmieblo service"
