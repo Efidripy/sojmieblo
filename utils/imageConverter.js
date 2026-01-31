@@ -90,9 +90,13 @@ class ImageConverter {
      * @returns {Buffer} - Буфер изображения
      */
     static base64ToBuffer(base64String) {
-        const matches = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        // Убираем возможные пробелы и переносы строк
+        const cleanedString = base64String.trim();
+        
+        // Более гибкий regex для поддержки различных MIME типов
+        const matches = cleanedString.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
         if (!matches || matches.length !== 3) {
-            throw new Error('Invalid base64 string format');
+            throw new Error('Invalid base64 string format. Expected format: data:image/...;base64,...');
         }
         return Buffer.from(matches[2], 'base64');
     }
