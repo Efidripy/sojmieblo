@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Deployment script for Sojmieblo application
+# Supports: Ubuntu 20.04, 22.04, 24.04 (Noble), Debian 11, 12
+# Installs: Node.js 20.x LTS, Nginx, and configures systemd service
+
 # Color Output Functions
 RED="\033[0;31m"
 GREEN="\033[0;32m"
