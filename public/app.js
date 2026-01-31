@@ -3,11 +3,11 @@ let canvas, gl, texture;
 let originalImage;
 let isImageLoaded = false;
 
-// Параметры деформации
-let brushRadius = 100; // Ширина кисти в пикселях
-let deformationStrength = -0.5; // Сила деформации
-let mouseDownTime = 0; // Время нажатия мыши
-let mouseDownTimer = null; // Таймер для отслеживания длительности нажатия
+// Параметры деформации из конфигурации
+let brushRadius = CONFIG.deformation.defaultBrushRadius;
+let deformationStrength = CONFIG.deformation.initialStrength;
+let mouseDownTime = 0;
+let mouseDownTimer = null;
 
 // DOM элементы
 const uploadSection = document.getElementById('uploadSection');
@@ -47,6 +47,48 @@ uploadSection.addEventListener('drop', (e) => {
     }
 });
 
+// Вставка из буфера обмена
+if (CONFIG.upload.enableClipboard) {
+    // Обработчик для всего документа
+    document.addEventListener('paste', (e) => {
+        // Проверяем что секция загрузки видима (иначе можем испортить работающее изображение)
+        if (uploadSection.style.display !== 'none') {
+            handlePaste(e);
+        }
+    });
+    
+    // Также добавляем обработчик на canvasContainer для повторной вставки
+    canvasContainer.addEventListener('paste', (e) => {
+        if (confirm('Загрузить новое изображение? Текущие изменения будут потеряны.')) {
+            handlePaste(e);
+        }
+    });
+}
+
+// Функция обработки вставки из буфера обмена
+function handlePaste(e) {
+    e.preventDefault();
+    
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        // Проверяем что это изображение
+        if (item.type.indexOf('image') !== -1) {
+            const blob = item.getAsFile();
+            if (blob) {
+                handleFile(blob);
+                return;
+            }
+        }
+    }
+    
+    // Если изображение не найдено
+    alert('В буфере обмена нет изображения. Скопируйте изображение (Ctrl+C) и попробуйте снова.');
+}
+
 // Обработка выбора файла
 function handleFileSelect(e) {
     const file = e.target.files[0];
@@ -57,8 +99,16 @@ function handleFileSelect(e) {
 
 // Обработка загрузки файла
 function handleFile(file) {
-    if (!file.type.match('image.*')) {
-        alert('Пожалуйста, выберите файл изображения!');
+    // Проверка типа файла
+    if (!CONFIG.upload.acceptedTypes.includes(file.type)) {
+        alert(`Неподдерживаемый тип файла. Поддерживаются: ${CONFIG.upload.acceptedTypes.join(', ')}`);
+        return;
+    }
+    
+    // Проверка размера файла
+    if (file.size > CONFIG.upload.maxFileSize) {
+        const maxSizeMB = CONFIG.upload.maxFileSize / (1024 * 1024);
+        alert(`Файл слишком большой. Максимальный размер: ${maxSizeMB}MB`);
         return;
     }
 
@@ -71,8 +121,20 @@ function handleFile(file) {
             uploadSection.style.display = 'none';
             canvasContainer.style.display = 'block';
             isImageLoaded = true;
+            
+            // Сброс параметров при загрузке нового изображения
+            brushRadius = CONFIG.deformation.defaultBrushRadius;
+            deformationStrength = CONFIG.deformation.initialStrength;
+            updateRadiusDisplay();
+            updateStrengthDisplay();
+        };
+        img.onerror = () => {
+            alert('Ошибка загрузки изображения. Попробуйте другой файл.');
         };
         img.src = e.target.result;
+    };
+    reader.onerror = () => {
+        alert('Ошибка чтения файла.');
     };
     reader.readAsDataURL(file);
 }
@@ -92,34 +154,31 @@ function initializeCanvas(img) {
         // Загрузка текстуры
         texture = canvas.texture(img);
         
-        // Адаптивный размер канваса в зависимости от разрешения экрана
-        const containerWidth = canvasContainer.offsetWidth - 60; // Вычитаем padding
+        // Адаптивный размер канваса из конфигурации
+        const containerWidth = canvasContainer.offsetWidth - 60;
         
-        // Определяем максимальные размеры в зависимости от ширины экрана
         let maxWidth, maxHeight;
+        const screenWidth = window.innerWidth;
+        const resolutions = CONFIG.canvas.resolutions;
         
-        if (window.innerWidth >= 3840) {
-            // 4K экраны
-            maxWidth = Math.min(2400, containerWidth);
-            maxHeight = 1600;
-        } else if (window.innerWidth >= 2560) {
-            // 2K экраны
-            maxWidth = Math.min(1600, containerWidth);
-            maxHeight = 1200;
-        } else if (window.innerWidth >= 1920) {
-            // Full HD
-            maxWidth = Math.min(1200, containerWidth);
-            maxHeight = 900;
+        // Определяем разрешение по конфигурации
+        if (screenWidth >= resolutions['4K'].minWidth) {
+            maxWidth = Math.min(resolutions['4K'].maxWidth, containerWidth);
+            maxHeight = resolutions['4K'].maxHeight;
+        } else if (screenWidth >= resolutions['2K'].minWidth) {
+            maxWidth = Math.min(resolutions['2K'].maxWidth, containerWidth);
+            maxHeight = resolutions['2K'].maxHeight;
+        } else if (screenWidth >= resolutions['FullHD'].minWidth) {
+            maxWidth = Math.min(resolutions['FullHD'].maxWidth, containerWidth);
+            maxHeight = resolutions['FullHD'].maxHeight;
         } else {
-            // Меньше Full HD
-            maxWidth = Math.min(800, containerWidth);
-            maxHeight = 600;
+            maxWidth = Math.min(resolutions['default'].maxWidth, containerWidth);
+            maxHeight = resolutions['default'].maxHeight;
         }
         
         let width = img.width;
         let height = img.height;
         
-        // Масштабирование с сохранением пропорций
         if (width > maxWidth || height > maxHeight) {
             const ratio = Math.min(maxWidth / width, maxHeight / height);
             width = width * ratio;
@@ -129,10 +188,7 @@ function initializeCanvas(img) {
         canvas.width = width;
         canvas.height = height;
         
-        // Отрисовка исходного изображения
         canvas.draw(texture).update();
-        
-        // Добавление взаимодействия с мышью
         setupMouseInteraction();
         
     } catch (e) {
@@ -167,17 +223,20 @@ function setupMouseInteraction() {
         mouseX = e.clientX - rect.left;
         mouseY = e.clientY - rect.top;
         
-        // Начинаем отсчет времени нажатия
         mouseDownTime = Date.now();
         
-        // Постепенное увеличение силы при удержании
         mouseDownTimer = setInterval(() => {
-            const holdDuration = (Date.now() - mouseDownTime) / 1000; // в секундах
-            // Увеличиваем силу от -0.5 до -1.5 за 2 секунды
-            deformationStrength = Math.max(-1.5, -0.5 - (holdDuration * 0.5));
+            const holdDuration = (Date.now() - mouseDownTime) / 1000;
+            const strengthIncrease = holdDuration * CONFIG.deformation.strengthIncreaseRate;
+            
+            deformationStrength = Math.max(
+                CONFIG.deformation.minStrength,
+                CONFIG.deformation.initialStrength - strengthIncrease
+            );
+            
             applyDeformation(mouseX, mouseY);
             updateStrengthDisplay();
-        }, 50); // Обновляем каждые 50мс
+        }, CONFIG.deformation.updateInterval);
         
         applyDeformation(mouseX, mouseY);
     });
@@ -185,7 +244,7 @@ function setupMouseInteraction() {
     canvas.addEventListener('mouseup', () => {
         isMouseDown = false;
         clearInterval(mouseDownTimer);
-        deformationStrength = -0.5; // Сброс силы
+        deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
         resetImage();
     });
@@ -193,7 +252,7 @@ function setupMouseInteraction() {
     canvas.addEventListener('mouseleave', () => {
         isMouseDown = false;
         clearInterval(mouseDownTimer);
-        deformationStrength = -0.5;
+        deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
         resetImage();
     });
@@ -202,16 +261,18 @@ function setupMouseInteraction() {
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         
-        // Изменяем радиус (от 20 до 300 пикселей)
+        const step = CONFIG.deformation.brushRadiusStep;
+        const min = CONFIG.deformation.minBrushRadius;
+        const max = CONFIG.deformation.maxBrushRadius;
+        
         if (e.deltaY < 0) {
-            brushRadius = Math.min(300, brushRadius + 10);
+            brushRadius = Math.min(max, brushRadius + step);
         } else {
-            brushRadius = Math.max(20, brushRadius - 10);
+            brushRadius = Math.max(min, brushRadius - step);
         }
         
         updateRadiusDisplay();
         
-        // Применяем деформацию с новым радиусом если мышь нажата
         if (isMouseDown) {
             applyDeformation(mouseX, mouseY);
         }

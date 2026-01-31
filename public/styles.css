@@ -75,6 +75,12 @@ h1 {
     font-size: 0.9em;
 }
 
+.hint:last-of-type {
+    margin-top: 10px;
+    font-size: 0.85em;
+    color: #666666; /* 40% белый */
+}
+
 .canvas-container {
     background: #0d0d0d; /* 5% серый */
     border: 1px solid #1a1a1a; /* 10% серый */
