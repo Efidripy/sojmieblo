@@ -38,6 +38,61 @@ npm install
 - `express` - веб-фреймворк для Node.js
 - `express-rate-limit` - middleware для ограничения количества запросов
 
+## 🚀 Quick Install (Recommended)
+
+One-command installation with automatic dependency checking:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Efidripy/sojmieblo/main/install.sh | sudo bash
+```
+
+Or for a safer approach, review the script first:
+
+```bash
+# Download the script
+curl -fsSL https://raw.githubusercontent.com/Efidripy/sojmieblo/main/install.sh -o install.sh
+
+# Review the script (optional but recommended)
+less install.sh
+
+# Make it executable and run
+chmod +x install.sh
+sudo ./install.sh
+```
+
+This script will:
+- ✅ Check and install Node.js 20.x LTS
+- ✅ Install all npm dependencies (express, sharp, uuid, etc.)
+- ✅ Install system dependencies for Sharp (libvips, build-essential)
+- ✅ Setup systemd service
+- ✅ Start the application automatically
+
+## 📦 Dependencies
+
+### Runtime Dependencies
+- **express** (^4.18.2) - Web framework
+- **express-rate-limit** (^6.7.0) - API rate limiting
+- **sharp** (^0.33.2) - High-performance image processing
+- **uuid** (^9.0.1) - Unique ID generation
+
+### System Dependencies (auto-installed by install.sh)
+- **Node.js** 18+ (recommended 20.x LTS)
+- **libvips** - Image processing library (required by Sharp)
+- **build-essential** - Compilation tools
+- **Git** - Version control
+
+## 🎯 Version
+
+Current version: Check `package.json` or run:
+
+```bash
+cd /opt/sojmieblo
+node -p "require('./package.json').version"
+```
+
+Each deployment generates a unique semantic version with a fun codename! 🎉
+Example: `1.4.72-Rubber-Face`
+
 ## Запуск
 
 ### Локальный запуск
@@ -219,6 +274,32 @@ const PORT = process.env.PORT || 3000;  // Измените 3000 на нужны
 
 После изменения перезапустите:
 ```bash
+sudo systemctl restart sojmieblo
+```
+
+## 🧹 Maintenance
+
+### Clean old logs and cache:
+
+```bash
+# Clean npm cache
+sudo npm cache clean --force
+
+# Clean systemd journals (keep last 7 days)
+sudo journalctl --vacuum-time=7d
+
+# Clean old node_modules
+cd /opt/sojmieblo
+sudo rm -rf node_modules package-lock.json
+sudo npm install
+```
+
+### Update to latest version:
+
+```bash
+cd /opt/sojmieblo
+git pull origin main
+npm install
 sudo systemctl restart sojmieblo
 ```
 
