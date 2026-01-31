@@ -443,3 +443,94 @@ h1 {
         margin-right: 0;
     }
 }
+
+/* Улучшенная адаптивность для маленьких экранов */
+@media (max-width: 480px) {
+    /* Компактные кнопки */
+    .controls {
+        gap: 8px;
+        margin-top: 15px;
+    }
+    
+    .reset-btn, .save-btn, .change-btn {
+        padding: 10px 20px;
+        font-size: 0.9em;
+        border-radius: 30px;
+    }
+    
+    /* Компактные параметры */
+    .parameters {
+        gap: 15px;
+        padding: 10px;
+        margin-top: 15px;
+    }
+    
+    .parameter-label {
+        font-size: 0.75em;
+    }
+    
+    .parameter-value {
+        font-size: 1em;
+    }
+    
+    /* Меньше padding у canvas контейнера */
+    .canvas-container {
+        padding: 20px 15px;
+    }
+    
+    /* Инструкция меньше */
+    .instruction {
+        font-size: 0.85em;
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 360px) {
+    /* Экстра-маленькие экраны */
+    .controls {
+        gap: 6px;
+    }
+    
+    .reset-btn, .save-btn, .change-btn {
+        padding: 8px 16px;
+        font-size: 0.85em;
+    }
+    
+    .parameters {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    h1 {
+        font-size: 1.8em;
+    }
+    
+    .subtitle {
+        font-size: 0.95em;
+    }
+}
+
+/* Ландшафтная ориентация на мобильных */
+@media (max-height: 600px) and (orientation: landscape) {
+    body {
+        padding: 10px;
+    }
+    
+    .canvas-container {
+        padding: 15px;
+    }
+    
+    .parameters {
+        margin-top: 10px;
+        padding: 8px;
+    }
+    
+    .controls {
+        margin-top: 10px;
+        gap: 10px;
+    }
+    
+    .instruction {
+        display: none; /* Скрыть инструкцию в landscape */
+    }
+}
