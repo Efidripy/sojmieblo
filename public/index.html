@@ -19,11 +19,24 @@
 
         <div class="canvas-container" id="canvasContainer" style="display: none;">
             <canvas id="glCanvas"></canvas>
+            
+            <!-- Информация о параметрах -->
+            <div class="parameters">
+                <div class="parameter">
+                    <span class="parameter-label">Ширина кисти (колесико мыши)</span>
+                    <span class="parameter-value" id="radiusValue">100</span>
+                </div>
+                <div class="parameter">
+                    <span class="parameter-label">Сила нажатия (удержание)</span>
+                    <span class="parameter-value" id="strengthValue">0.50</span>
+                </div>
+            </div>
+            
             <div class="controls">
                 <button class="reset-btn" id="resetBtn">Сбросить</button>
                 <button class="change-btn" id="changeBtn">Новое фото</button>
             </div>
-            <p class="instruction">Наведите мышью на изображение, чтобы деформировать лицо</p>
+            <p class="instruction">Наведите и удерживайте мышь для деформации. Колесико мыши — изменить ширину кисти.</p>
         </div>
     </div>
 
