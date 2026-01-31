@@ -169,8 +169,13 @@ async function handleFile(file) {
 // Инициализация WebGL канваса с помощью glfx.js
 function initializeCanvas(img) {
     try {
+        // Проверка наличия glfx.js
+        if (!window.fx) {
+            throw new Error('glfx.js не загружен. Убедитесь, что библиотека подключена.');
+        }
+        
         // Создание glfx канваса
-        canvas = fx.canvas();
+        canvas = window.fx.canvas();
         
         // Замена обычного канваса на glfx канвас
         const oldCanvas = document.getElementById('glCanvas');
