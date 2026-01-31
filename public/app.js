@@ -297,10 +297,8 @@ function setupMouseInteraction() {
         if (isMouseDown) {
             hasDeformation = true; // Отмечаем что произошла деформация
             applyDeformation(mouseX, mouseY);
-        } else {
-            // Сброс изображения когда не нажато
-            resetImage();
         }
+        // No else block - let deformation persist
     });
     
     canvas.addEventListener('mousedown', (e) => {
@@ -335,16 +333,7 @@ function setupMouseInteraction() {
         clearInterval(mouseDownTimer);
         deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
-        
-        // Показываем диалог сохранения только если была деформация
-        // НЕ сбрасываем изображение - оставляем деформацию видимой
-        if (hasDeformation) {
-            showSaveDialog();
-            hasDeformation = false; // Сбрасываем флаг после показа диалога
-        } else {
-            // Если не было деформации, сбрасываем как обычно
-            resetImage();
-        }
+        // Dialog removed - save only via button
     });
     
     canvas.addEventListener('mouseleave', () => {
@@ -352,7 +341,6 @@ function setupMouseInteraction() {
         clearInterval(mouseDownTimer);
         deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
-        resetImage();
         hideBrush(); // Скрываем кисть при выходе мыши
     });
     
@@ -388,6 +376,9 @@ function applyDeformation(x, y) {
     try {
         // Используем brushRadius напрямую
         // Центр деформации всегда под курсором (x, y)
+        // CRITICAL: Load current canvas state into texture before applying new deformation
+        // This allows deformations to accumulate/stack instead of replacing each other
+        texture.loadContentsOf(canvas);
         canvas.draw(texture)
             .bulgePinch(x, y, brushRadius, deformationStrength)
             .update();
@@ -398,13 +389,26 @@ function applyDeformation(x, y) {
 
 // Сброс изображения в исходное состояние
 function resetImage() {
-    if (!texture || !canvas) return;
+    if (!texture || !isImageLoaded) return;
     
-    try {
-        canvas.draw(texture).update();
-    } catch (e) {
-        console.error('Ошибка сброса изображения:', e);
+    // Show save dialog if there were changes
+    if (hasDeformation) {
+        showSaveDialog();
+        return;
     }
+    
+    // Reset to original
+    performReset();
+}
+
+// Выполнить сброс изображения без проверки
+function performReset() {
+    if (!texture || !isImageLoaded) return;
+    
+    // Reset to original
+    texture = canvas.texture(previewImage || originalImage);
+    canvas.draw(texture).update();
+    hasDeformation = false;
 }
 
 // Обновление отображения силы нажатия
@@ -501,13 +505,13 @@ function initializeSaveDialog() {
             }
         }
         // Сбрасываем изображение после сохранения
-        resetImage();
+        performReset();
     });
     
     document.getElementById('saveDialogNo').addEventListener('click', () => {
         closeSaveDialog();
         // Сбрасываем изображение если пользователь отказался сохранять
-        resetImage();
+        performReset();
     });
     
     // Закрытие по клику вне диалога
@@ -515,7 +519,7 @@ function initializeSaveDialog() {
         if (e.target === saveDialog) {
             closeSaveDialog();
             // Сбрасываем изображение при закрытии диалога
-            resetImage();
+            performReset();
         }
     });
 }
@@ -563,7 +567,7 @@ document.addEventListener('keydown', (e) => {
         const saveDialog = document.getElementById('saveDialog');
         if (saveDialog && saveDialog.style.display === 'flex') {
             closeSaveDialog();
-            resetImage(); // Сбрасываем изображение при закрытии ESC
+            performReset(); // Сбрасываем изображение при закрытии ESC
             return;
         }
         
