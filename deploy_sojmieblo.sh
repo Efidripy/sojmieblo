@@ -138,7 +138,20 @@ install_nodejs() {
 # Function to configure Nginx
 configure_nginx() {
     echo -e "${YELLOW}[INFO] ${NC}Настройка Nginx..."
+    
+    # Проверяем логи systemd перед настройкой nginx для определения правильного порта
     echo ""
+    echo "Проверка логов systemd для определения порта..."
+    if systemctl is-active --quiet sojmieblo; then
+        echo "Последние 50 строк логов сервиса:"
+        journalctl -u sojmieblo -n 50 --no-pager | tail -20
+        echo ""
+    fi
+    
+    local current_port=$(get_current_port)
+    echo -e "${GREEN}Обнаружен порт: ${current_port}${NC}"
+    echo ""
+    
     echo "Выберите как настроить Nginx:"
     echo "1) Добавить location блок в существующий конфиг"
     echo "2) Создать новый конфиг для Sojmieblo"
@@ -167,6 +180,8 @@ configure_nginx() {
 
 # Function to add location block to existing Nginx config
 add_to_existing_nginx() {
+    local current_port=$(get_current_port)
+    
     echo ""
     echo "Доступные Nginx конфиги:"
     
@@ -199,16 +214,21 @@ add_to_existing_nginx() {
     echo "Выбран: $(basename $selected_conf)"
     
     # Ask for location path
-    read -p "Введите путь location (например /sojmieblo или /): " location_path
-    location_path=${location_path:-/sojmieblo}
+    read -p "Введите путь location (например / или /sojmieblo): " location_path
+    location_path=${location_path:-/}
+    
+    # Validate location path - ensure well-formed path with single slashes
+    if [[ ! "$location_path" =~ ^/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)?$ ]]; then
+        error_exit "Неверный путь location. Путь должен начинаться с / и содержать только буквы, цифры, - и _ между одинарными слэшами"
+    fi
     
     # Backup original config
     cp "$selected_conf" "${selected_conf}.backup_$(date +%Y%m%d_%H%M%S)"
     
-    # Create location block with markers
+    # Create location block with markers using current port
     location_block="    # Sojmieblo proxy - START
     location $location_path {
-        proxy_pass http://127.0.0.1:777;
+        proxy_pass http://127.0.0.1:${current_port};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -231,7 +251,7 @@ add_to_existing_nginx() {
     if nginx -t 2>&1 | tee -a $LOG_DIR/deploy.log; then
         systemctl reload nginx
         echo -e "${GREEN}[OK] ${NC}Location блок добавлен в $(basename $selected_conf)"
-        echo "Путь: $location_path -> http://127.0.0.1:777"
+        echo "Путь: $location_path -> http://127.0.0.1:${current_port}"
         log_message "Nginx location added to $selected_conf at $location_path"
     else
         # Restore backup - find the most recent backup
@@ -247,6 +267,8 @@ add_to_existing_nginx() {
 
 # Function to create new Nginx config
 create_new_nginx_config() {
+    local current_port=$(get_current_port)
+    
     read -p "Введите доменное имя для нового конфига: " DOMAIN
     
     if [ -z "$DOMAIN" ]; then
@@ -272,7 +294,7 @@ server {
     # Sojmieblo proxy - START
     # Proxy API requests to backend
     location @backend {
-        proxy_pass http://127.0.0.1:777;
+        proxy_pass http://127.0.0.1:${current_port};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';

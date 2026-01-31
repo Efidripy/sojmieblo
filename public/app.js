@@ -10,6 +10,7 @@ let brushRadius = CONFIG.deformation.defaultBrushRadius;
 let deformationStrength = CONFIG.deformation.initialStrength;
 let mouseDownTime = 0;
 let mouseDownTimer = null;
+let hasDeformation = false; // Флаг для отслеживания изменений
 
 // Canvas для визуализации кисти
 let brushOverlay = null;
@@ -234,20 +235,20 @@ function drawBrush(x, y, radius) {
     // Очищаем canvas
     brushCtx.clearRect(0, 0, brushOverlay.width, brushOverlay.height);
     
-    // Создаем радиальный градиент для мягких краев
+    // Создаем радиальный градиент для мягких краев, центр точно на координатах курсора
     const gradient = brushCtx.createRadialGradient(x, y, 0, x, y, radius);
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');     // Центр - 30% прозрачности
-    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.15)');  // 70% радиуса - 15%
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');       // Края - полностью прозрачно
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.06)');     // Центр - 6% прозрачности (было 30%, теперь 30/5)
+    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.03)');   // 70% радиуса - 3% (было 15%, теперь 15/5)
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');        // Края - полностью прозрачно
     
-    // Рисуем круг
+    // Рисуем круг с центром точно в позиции курсора
     brushCtx.fillStyle = gradient;
     brushCtx.beginPath();
     brushCtx.arc(x, y, radius, 0, Math.PI * 2);
     brushCtx.fill();
     
-    // Добавляем обводку для четкости
-    brushCtx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    // Добавляем обводку для четкости, также с уменьшенной прозрачностью
+    brushCtx.strokeStyle = 'rgba(0, 0, 0, 0.08)';  // Обводка - 8% (было 40%, теперь 40/5)
     brushCtx.lineWidth = 2;
     brushCtx.beginPath();
     brushCtx.arc(x, y, radius, 0, Math.PI * 2);
@@ -276,6 +277,7 @@ function setupMouseInteraction() {
         
         // Применение эффекта только при нажатии
         if (isMouseDown) {
+            hasDeformation = true; // Отмечаем что произошла деформация
             applyDeformation(mouseX, mouseY);
         } else {
             // Сброс изображения когда не нажато
@@ -313,6 +315,12 @@ function setupMouseInteraction() {
         deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
         resetImage();
+        
+        // Показываем диалог сохранения только если была деформация
+        if (hasDeformation) {
+            showSaveDialog();
+            hasDeformation = false; // Сбрасываем флаг после показа диалога
+        }
     });
     
     canvas.addEventListener('mouseleave', () => {
@@ -425,7 +433,82 @@ if (saveBtn) {
 // Загрузить список работ при старте
 window.addEventListener('load', () => {
     workManager.loadWorks();
+    initializeSaveDialog();
 });
+
+// Инициализация диалога сохранения (вызывается один раз)
+function initializeSaveDialog() {
+    const saveDialog = document.createElement('div');
+    saveDialog.id = 'saveDialog';
+    saveDialog.className = 'modal';
+    saveDialog.style.display = 'none';
+    saveDialog.innerHTML = `
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h2 style="margin-bottom: 20px;">Сохранить результат?</h2>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="saveDialogYes" class="save-btn" style="min-width: 100px;">Да</button>
+                <button id="saveDialogNo" class="reset-btn" style="min-width: 100px;">Нет</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(saveDialog);
+    
+    // Обработчики для кнопок (устанавливаются один раз)
+    document.getElementById('saveDialogYes').addEventListener('click', async () => {
+        closeSaveDialog();
+        try {
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Сохранение...';
+            }
+            
+            await workManager.saveWork(canvas);
+            
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Сохранить';
+            }
+        } catch (error) {
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Сохранить';
+            }
+        }
+    });
+    
+    document.getElementById('saveDialogNo').addEventListener('click', () => {
+        closeSaveDialog();
+    });
+    
+    // Закрытие по клику вне диалога
+    saveDialog.addEventListener('click', (e) => {
+        if (e.target === saveDialog) {
+            closeSaveDialog();
+        }
+    });
+}
+
+// Показать диалог сохранения
+function showSaveDialog() {
+    if (!canvas || !isImageLoaded) {
+        return;
+    }
+    
+    const saveDialog = document.getElementById('saveDialog');
+    if (saveDialog) {
+        saveDialog.style.display = 'flex';
+    }
+}
+
+// Закрыть диалог сохранения
+function closeSaveDialog() {
+    const saveDialog = document.getElementById('saveDialog');
+    if (saveDialog) {
+        saveDialog.style.display = 'none';
+    }
+}
 
 // Закрытие модального окна
 const modal = document.getElementById('workModal');
@@ -445,9 +528,19 @@ if (modal) {
 
 // Закрытие по ESC (глобальный обработчик, добавляется один раз)
 document.addEventListener('keydown', (e) => {
-    const modal = document.getElementById('workModal');
-    if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
-        workManager.closeWorkModal();
+    if (e.key === 'Escape') {
+        // Закрываем диалог сохранения если открыт
+        const saveDialog = document.getElementById('saveDialog');
+        if (saveDialog && saveDialog.style.display === 'flex') {
+            closeSaveDialog();
+            return;
+        }
+        
+        // Закрываем модальное окно работ если открыто
+        const modal = document.getElementById('workModal');
+        if (modal && modal.style.display === 'flex') {
+            workManager.closeWorkModal();
+        }
     }
 });
 
