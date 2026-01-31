@@ -100,7 +100,7 @@ sudo systemctl reload nginx  # Apply changes
 **Why Express.json limit is 50MB:**
 - Frontend limit: 30MB for binary image data (CONFIG.upload.maxFileSize)
 - Base64 encoding adds ~33% overhead: 30MB binary → ~40MB base64
-- Express.json limit: 50MB to safely accommodate base64-encoded images
+- Express.json limit: 50MB to safely accommodate base64-encoded images with buffer for HTTP headers and metadata
 - Rate limiting: 100 requests per 15 minutes (configured in server.js)
 
 ## 🔧 Управление
