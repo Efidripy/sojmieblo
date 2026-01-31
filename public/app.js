@@ -150,10 +150,6 @@ function setupMouseInteraction() {
 function applyDeformation(x, y, isClick) {
     if (!texture || !canvas) return;
     
-    // Scale coordinates to canvas dimensions
-    const canvasX = x;
-    const canvasY = y;
-    
     // Radius of effect (proportional to canvas size)
     const radius = Math.min(canvas.width, canvas.height) * 0.2;
     
@@ -163,7 +159,7 @@ function applyDeformation(x, y, isClick) {
     try {
         // Draw texture with bulge effect
         canvas.draw(texture)
-            .bulgePinch(canvasX, canvasY, radius, strength)
+            .bulgePinch(x, y, radius, strength)
             .update();
     } catch (e) {
         console.error('Error applying deformation:', e);
