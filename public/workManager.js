@@ -8,19 +8,57 @@ class WorkManager {
     // Сохранить текущую работу
     async saveWork(canvasElement) {
         try {
-            // Получаем изображение из canvas
-            // CRITICAL FIX: WebGL canvas needs proper rendering before export
-            // Create temporary 2D canvas to capture WebGL content
+            // CRITICAL: Force WebGL to finish rendering
+            const gl = canvasElement._.gl;
+            
+            // Ensure texture is drawn (texture is a global variable from app.js)
+            if (typeof texture !== 'undefined' && texture) {
+                canvasElement.draw(texture).update();
+            }
+            
+            // Force GPU to complete all operations
+            gl.finish();
+            
+            // Read pixels directly from WebGL buffer
+            const width = canvasElement.width;
+            const height = canvasElement.height;
+            const pixels = new Uint8Array(width * height * 4);
+            
+            gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+            
+            // Create temporary canvas to flip Y-axis (WebGL renders upside down)
             const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvasElement.width;
-            tempCanvas.height = canvasElement.height;
+            tempCanvas.width = width;
+            tempCanvas.height = height;
             const tempCtx = tempCanvas.getContext('2d');
             
-            // Draw WebGL canvas content to 2D canvas
-            tempCtx.drawImage(canvasElement, 0, 0);
+            // Create ImageData from WebGL pixels
+            const imageData = tempCtx.createImageData(width, height);
             
-            // Now export from the 2D canvas (will not be black)
+            // Flip Y-axis (WebGL coords are bottom-left, canvas is top-left)
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const srcIdx = (y * width + x) * 4;
+                    const dstIdx = ((height - y - 1) * width + x) * 4;
+                    imageData.data[dstIdx] = pixels[srcIdx];
+                    imageData.data[dstIdx + 1] = pixels[srcIdx + 1];
+                    imageData.data[dstIdx + 2] = pixels[srcIdx + 2];
+                    imageData.data[dstIdx + 3] = pixels[srcIdx + 3];
+                }
+            }
+            
+            // Put flipped image data to canvas
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            // Export as JPEG
             const imageDataURL = tempCanvas.toDataURL('image/jpeg', 0.95);
+            
+            // Verify it's not empty/black (basic check)
+            // Minimum size adjusted based on canvas dimensions
+            const minExpectedSize = Math.max(500, width * height / 100);
+            if (imageDataURL.length < minExpectedSize) {
+                throw new Error(`Generated image is too small (likely black): ${imageDataURL.length} bytes, expected at least ${minExpectedSize}`);
+            }
 
             // Отправляем на сервер
             const response = await fetch('/api/save-work', {
