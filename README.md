@@ -177,6 +177,51 @@ npm start
 
 Архив содержит все необходимые файлы приложения, готовые к развертыванию.
 
+## Управление
+
+### Проверка статуса
+```bash
+systemctl status sojmieblo
+```
+
+### Просмотр логов
+```bash
+journalctl -u sojmieblo -f
+```
+
+### Перезапуск
+```bash
+systemctl restart sojmieblo
+```
+
+### Изменение порта
+
+Порт приложения определяется автоматически и сохраняется при обновлениях.
+
+**Способ 1: Изменить в systemd service**
+```bash
+sudo systemctl edit sojmieblo
+```
+Добавьте:
+```
+[Service]
+Environment="PORT=8080"
+```
+
+**Способ 2: Изменить в server.js**
+```bash
+sudo nano /opt/sojmieblo/server.js
+```
+Измените строку:
+```javascript
+const PORT = process.env.PORT || 3000;  // Измените 3000 на нужный порт
+```
+
+После изменения перезапустите:
+```bash
+sudo systemctl restart sojmieblo
+```
+
 ## Использование
 
 1. Откройте приложение в браузере
