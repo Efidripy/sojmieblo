@@ -159,12 +159,12 @@ install_app() {
         cd "$INSTALL_DIR"
     fi
     
-    # Update version in package.json
-    sed -i.bak 's/^  "version": ".*"/  "version": "'"${VERSION}"'"/' package.json
-    
     # Install npm dependencies
     echo -e "${YELLOW}📥 Installing npm packages...${NC}"
     npm install --production
+    
+    # Update version in package.json (after git operations to avoid conflicts)
+    sed -i.bak 's/^  "version": ".*"/  "version": "'"${VERSION}"'"/' package.json
     
     # Create works directory
     mkdir -p "$INSTALL_DIR/works"
