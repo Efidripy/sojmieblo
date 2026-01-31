@@ -1,49 +1,85 @@
 #!/bin/bash
 
-# Update package lists
-sudo apt update
+# Color Output Functions
+RED="\033[0;31m"
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+NC="\033[0m" # No Color
 
-# Install Node.js
-sudo apt install -y nodejs npm git
+# Define Application and Log Directories
+APP_DIR="/var/www/sojmieblo"
+LOG_DIR="/var/log/sojmieblo"
 
-# Clone the GitHub repository
-git clone https://github.com/username/repository.git
-cd repository
+# Create log directory if it doesn't exist
+mkdir -p $LOG_DIR
 
-# Modify server.js for port 777 and localhost binding
-sed -i 's/const PORT = 3000/const PORT = 777/' server.js
-sed -i 's/const HOST = "0.0.0.0"/const HOST = "localhost"/' server.js
+log_message() {
+    echo -e "${GREEN}[INFO] ${NC}$(date) - $1" >> $LOG_DIR/deploy.log
+}
 
-# Install npm dependencies
-npm install
+error_exit() {
+    echo -e "${RED}[ERROR] ${NC}$1" >> $LOG_DIR/deploy.log
+    exit 1
+}
 
-# Create systemd service for autostart
-cat <<EOT | sudo tee /etc/systemd/system/myapp.service
+# Step 1: Git Clone
+log_message "Cloning repository..."
+git clone https://github.com/Efidripy/sojmieblo.git $APP_DIR || error_exit "Git clone failed"
+
+# Step 2: Install Node.js
+log_message "Installing Node.js..."
+curl -sL https://deb.nodesource.com/setup_14.x | bash - || error_exit "Node.js setup script failed"
+apt-get install -y nodejs || error_exit "Node.js installation failed"
+
+# Step 3: Modify server.js
+log_message "Modifying server.js..."
+sed -i 's/const port = .*;/const port = 777;/' $APP_DIR/server.js || error_exit "Failed to modify server.js"
+sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $APP_DIR/server.js || error_exit "Failed to modify hostname in server.js"
+
+# Step 4: Create Systemd Service
+log_message "Creating systemd service..."
+cat <<EOL >/etc/systemd/system/sojmieblo.service
 [Unit]
-Description=My Node.js App
+Description=Sojmieblo Node.js App
+After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /path/to/repository/server.js
-Restart=always
-User=ubuntu
-Environment=PATH=/usr/bin:/usr/local/bin
 Environment=NODE_ENV=production
+WorkingDirectory=$APP_DIR
+ExecStart=/usr/bin/node $APP_DIR/server.js
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
-EOT
+EOL
 
-# Start the service
-sudo systemctl start myapp
-sudo systemctl enable myapp
+systemctl enable sojmieblo.service || error_exit "Failed to enable service"
 
-# Configure Nginx proxy with user prompt for config path
-read -p 'Enter Nginx config path: ' config_path
-sudo cp /etc/nginx/sites-available/default $config_path
-sudo systemctl restart nginx
+# Step 5: Nginx Configuration
+log_message "Configuring Nginx..."
+read -p "Please enter your domain name: " DOMAIN
+cat <<EOL >/etc/nginx/sites-available/sojmieblo
+server {
+    listen 80;
+    server_name $DOMAIN;
 
-# Set up firewall rules
-sudo ufw allow 777
+    location / {
+        proxy_pass http://127.0.0.1:777;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+EOL
 
-# Provide installation instructions
-echo "Installation completed successfully! Your application should now be running on http://localhost:777"
+ln -s /etc/nginx/sites-available/sojmieblo /etc/nginx/sites-enabled/ || error_exit "Failed to create symlink for Nginx"
+
+# Step 6: Restart Services
+log_message "Restarting Nginx and Sojmieblo service..."
+systemctl restart nginx || error_exit "Failed to restart Nginx"
+systemctl start sojmieblo.service || error_exit "Failed to start Sojmieblo service"
+
+# Installation Summary
+log_message "Deployment completed successfully! Check the logs for more details."
