@@ -11,7 +11,9 @@ class WorkManager {
             // CRITICAL: Force WebGL to finish rendering
             const gl = canvasElement._.gl;
             
-            // Ensure texture is drawn (texture is a global variable from app.js)
+            // Ensure texture is drawn
+            // Note: 'texture' is a global variable defined in app.js
+            // It holds the current image texture loaded into the glfx canvas
             if (typeof texture !== 'undefined' && texture) {
                 canvasElement.draw(texture).update();
             }
@@ -55,6 +57,8 @@ class WorkManager {
             
             // Verify it's not empty/black (basic check)
             // Minimum size adjusted based on canvas dimensions
+            // Using 1% of total pixels as baseline (width * height / 100)
+            // This accounts for varying image sizes and JPEG compression
             const minExpectedSize = Math.max(500, width * height / 100);
             if (imageDataURL.length < minExpectedSize) {
                 throw new Error(`Generated image is too small (likely black): ${imageDataURL.length} bytes, expected at least ${minExpectedSize}`);
