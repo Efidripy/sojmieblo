@@ -160,7 +160,7 @@ install_app() {
     fi
     
     # Update version in package.json
-    sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
+    sed -i.bak 's/^  "version": ".*"/  "version": "'"${VERSION}"'"/' package.json
     
     # Install npm dependencies
     echo -e "${YELLOW}📥 Installing npm packages...${NC}"

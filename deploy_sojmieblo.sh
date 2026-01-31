@@ -37,14 +37,14 @@ check_dependencies() {
         echo -e "${YELLOW}⚠️  Missing dependencies: ${missing_deps[*]}${NC}"
         echo -e "${CYAN}Installing missing dependencies...${NC}"
         
-        apt-get update
-        apt-get install -y ${missing_deps[@]}
+        apt-get update || log_message "Warning: apt-get update failed"
+        apt-get install -y ${missing_deps[@]} || log_message "Warning: Some dependencies failed to install"
     fi
     
     # Check Sharp system dependencies
-    if ! dpkg -l | grep -q libvips; then
+    if ! dpkg -l | grep -q '^ii.*libvips[0-9]'; then
         echo -e "${YELLOW}⚠️  Installing Sharp dependencies...${NC}"
-        apt-get install -y build-essential libvips-dev libvips-tools pkg-config python3
+        apt-get install -y build-essential libvips-dev libvips-tools pkg-config python3 || log_message "Warning: Sharp dependencies installation had issues"
     fi
     
     log_message "✅ All dependencies checked"
