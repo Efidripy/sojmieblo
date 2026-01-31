@@ -1,6 +1,8 @@
 // Основная логика приложения Sojmieblo
 let canvas, gl, texture;
-let originalImage;
+let originalImage;  // Оригинальное изображение
+let previewImage;   // Превью для отображения
+let imageScale = 1; // Масштаб между превью и оригиналом
 let isImageLoaded = false;
 
 // Параметры деформации из конфигурации
@@ -8,6 +10,10 @@ let brushRadius = CONFIG.deformation.defaultBrushRadius;
 let deformationStrength = CONFIG.deformation.initialStrength;
 let mouseDownTime = 0;
 let mouseDownTimer = null;
+
+// Canvas для визуализации кисти
+let brushOverlay = null;
+let brushCtx = null;
 
 // DOM элементы
 const uploadSection = document.getElementById('uploadSection');
@@ -98,7 +104,7 @@ function handleFileSelect(e) {
 }
 
 // Обработка загрузки файла
-function handleFile(file) {
+async function handleFile(file) {
     // Проверка типа файла
     if (!CONFIG.upload.acceptedTypes.includes(file.type)) {
         alert(`Неподдерживаемый тип файла. Поддерживаются: ${CONFIG.upload.acceptedTypes.join(', ')}`);
@@ -113,20 +119,37 @@ function handleFile(file) {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         const img = new Image();
-        img.onload = () => {
-            originalImage = img;
-            initializeCanvas(img);
-            uploadSection.style.display = 'none';
-            canvasContainer.style.display = 'block';
-            isImageLoaded = true;
-            
-            // Сброс параметров при загрузке нового изображения
-            brushRadius = CONFIG.deformation.defaultBrushRadius;
-            deformationStrength = CONFIG.deformation.initialStrength;
-            updateRadiusDisplay();
-            updateStrengthDisplay();
+        img.onload = async () => {
+            try {
+                // Сохраняем оригинал
+                originalImage = img;
+                
+                // Создаем превью оптимального размера
+                const optimalSize = ImageProcessor.getOptimalPreviewSize();
+                const imageData = await ImageProcessor.createPreview(img, optimalSize);
+                
+                previewImage = imageData.preview;
+                imageScale = imageData.scale;
+                
+                console.log(`Оригинал: ${img.width}x${img.height}, Превью: ${previewImage.width}x${previewImage.height}, Scale: ${imageScale}`);
+                
+                // Инициализируем с превью
+                initializeCanvas(previewImage);
+                uploadSection.style.display = 'none';
+                canvasContainer.style.display = 'block';
+                isImageLoaded = true;
+                
+                // Сброс параметров
+                brushRadius = CONFIG.deformation.defaultBrushRadius;
+                deformationStrength = CONFIG.deformation.initialStrength;
+                updateRadiusDisplay();
+                updateStrengthDisplay();
+            } catch (error) {
+                console.error('Ошибка создания превью:', error);
+                alert('Ошибка обработки изображения.');
+            }
         };
         img.onerror = () => {
             alert('Ошибка загрузки изображения. Попробуйте другой файл.');
@@ -154,47 +177,78 @@ function initializeCanvas(img) {
         // Загрузка текстуры
         texture = canvas.texture(img);
         
-        // Адаптивный размер канваса из конфигурации
-        const containerWidth = canvasContainer.offsetWidth - 60;
-        
-        let maxWidth, maxHeight;
-        const screenWidth = window.innerWidth;
-        const resolutions = CONFIG.canvas.resolutions;
-        
-        // Определяем разрешение по конфигурации
-        if (screenWidth >= resolutions['4K'].minWidth) {
-            maxWidth = Math.min(resolutions['4K'].maxWidth, containerWidth);
-            maxHeight = resolutions['4K'].maxHeight;
-        } else if (screenWidth >= resolutions['2K'].minWidth) {
-            maxWidth = Math.min(resolutions['2K'].maxWidth, containerWidth);
-            maxHeight = resolutions['2K'].maxHeight;
-        } else if (screenWidth >= resolutions['FullHD'].minWidth) {
-            maxWidth = Math.min(resolutions['FullHD'].maxWidth, containerWidth);
-            maxHeight = resolutions['FullHD'].maxHeight;
-        } else {
-            maxWidth = Math.min(resolutions['default'].maxWidth, containerWidth);
-            maxHeight = resolutions['default'].maxHeight;
-        }
-        
-        let width = img.width;
-        let height = img.height;
-        
-        if (width > maxWidth || height > maxHeight) {
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            width = width * ratio;
-            height = height * ratio;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
+        // Размер canvas по размеру изображения (превью)
+        canvas.width = img.width;
+        canvas.height = img.height;
         
         canvas.draw(texture).update();
+        
+        // Создаем overlay canvas для визуализации кисти
+        createBrushOverlay();
+        
         setupMouseInteraction();
         
     } catch (e) {
         console.error('Ошибка инициализации канваса:', e);
         alert('Ошибка инициализации WebGL. Убедитесь, что ваш браузер поддерживает WebGL.');
     }
+}
+
+// Создание overlay canvas для отображения кисти
+function createBrushOverlay() {
+    // Удаляем старый overlay если есть
+    if (brushOverlay) {
+        brushOverlay.remove();
+    }
+    
+    brushOverlay = document.createElement('canvas');
+    brushOverlay.id = 'brushOverlay';
+    brushOverlay.width = canvas.width;
+    brushOverlay.height = canvas.height;
+    brushOverlay.style.position = 'absolute';
+    brushOverlay.style.top = '0';
+    brushOverlay.style.left = '0';
+    brushOverlay.style.pointerEvents = 'none'; // Не блокирует события мыши
+    brushOverlay.style.zIndex = '10';
+    
+    brushCtx = brushOverlay.getContext('2d');
+    
+    // Вставляем overlay поверх canvas
+    canvas.parentElement.style.position = 'relative';
+    canvas.parentElement.appendChild(brushOverlay);
+}
+
+// Отрисовка круга кисти с мягкими краями
+function drawBrush(x, y, radius) {
+    if (!brushCtx) return;
+    
+    // Очищаем canvas
+    brushCtx.clearRect(0, 0, brushOverlay.width, brushOverlay.height);
+    
+    // Создаем радиальный градиент для мягких краев
+    const gradient = brushCtx.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');     // Центр - 30% прозрачности
+    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.15)');  // 70% радиуса - 15%
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');       // Края - полностью прозрачно
+    
+    // Рисуем круг
+    brushCtx.fillStyle = gradient;
+    brushCtx.beginPath();
+    brushCtx.arc(x, y, radius, 0, Math.PI * 2);
+    brushCtx.fill();
+    
+    // Добавляем обводку для четкости
+    brushCtx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    brushCtx.lineWidth = 2;
+    brushCtx.beginPath();
+    brushCtx.arc(x, y, radius, 0, Math.PI * 2);
+    brushCtx.stroke();
+}
+
+// Скрыть кисть
+function hideBrush() {
+    if (!brushCtx) return;
+    brushCtx.clearRect(0, 0, brushOverlay.width, brushOverlay.height);
 }
 
 // Настройка взаимодействия с мышью для деформации в реальном времени
@@ -207,6 +261,9 @@ function setupMouseInteraction() {
         const rect = canvas.getBoundingClientRect();
         mouseX = e.clientX - rect.left;
         mouseY = e.clientY - rect.top;
+        
+        // Отображаем кисть
+        drawBrush(mouseX, mouseY, brushRadius);
         
         // Применение эффекта только при нажатии
         if (isMouseDown) {
@@ -255,6 +312,7 @@ function setupMouseInteraction() {
         deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
         resetImage();
+        hideBrush(); // Скрываем кисть при выходе мыши
     });
     
     // Изменение ширины кисти колесиком мыши
@@ -272,6 +330,9 @@ function setupMouseInteraction() {
         }
         
         updateRadiusDisplay();
+        
+        // Обновляем визуализацию кисти
+        drawBrush(mouseX, mouseY, brushRadius);
         
         if (isMouseDown) {
             applyDeformation(mouseX, mouseY);
