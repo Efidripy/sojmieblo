@@ -46,6 +46,20 @@ One-command installation with automatic dependency checking:
 curl -fsSL https://raw.githubusercontent.com/Efidripy/sojmieblo/main/install.sh | sudo bash
 ```
 
+Or for a safer approach, review the script first:
+
+```bash
+# Download the script
+curl -fsSL https://raw.githubusercontent.com/Efidripy/sojmieblo/main/install.sh -o install.sh
+
+# Review the script (optional but recommended)
+less install.sh
+
+# Make it executable and run
+chmod +x install.sh
+sudo ./install.sh
+```
+
 This script will:
 - ✅ Check and install Node.js 20.x LTS
 - ✅ Install all npm dependencies (express, sharp, uuid, etc.)
