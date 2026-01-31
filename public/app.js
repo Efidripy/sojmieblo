@@ -175,7 +175,7 @@ function initializeCanvas(img) {
         }
         
         // Создание glfx канваса
-        canvas = fx.canvas();
+        canvas = window.fx.canvas();
         
         // Замена обычного канваса на glfx канвас
         const oldCanvas = document.getElementById('glCanvas');
