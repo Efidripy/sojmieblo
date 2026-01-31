@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
@@ -34,10 +35,10 @@ const checkInitialized = (req, res, next) => {
         await fileManager.initialize();
         fileManager.startAutoCleanup(1, 7); // Автоочистка каждый час, удаляем файлы старше 7 дней
         isInitialized = true;
-        console.log('FileManager инициализирован');
+        console.log('[INFO] FileManager инициализирован');
     } catch (error) {
-        console.error('Ошибка инициализации FileManager:', error);
-        console.error('Сервер продолжит работу, но функционал работ будет недоступен');
+        console.error('[ERROR] Ошибка инициализации FileManager:', error);
+        console.error('[ERROR] Сервер продолжит работу, но функционал работ будет недоступен');
     }
 })();
 
@@ -63,6 +64,24 @@ app.post('/api/save-work', async (req, res) => {
         
         if (!image) {
             return res.status(400).json({ error: 'Image data is required' });
+        }
+        
+        // Validate image is a string
+        if (typeof image !== 'string') {
+            return res.status(400).json({ error: 'Image must be a string' });
+        }
+        
+        // Validate image length (reasonable base64 image size)
+        // Max 50MB base64 string (approximately 66.67MB binary due to base64 overhead)
+        const MAX_IMAGE_LENGTH = 50 * 1024 * 1024; // 50MB
+        if (image.length > MAX_IMAGE_LENGTH) {
+            return res.status(400).json({ error: 'Image data too large' });
+        }
+        
+        // Validate base64 format
+        const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|bmp);base64,/;
+        if (!base64Regex.test(image)) {
+            return res.status(400).json({ error: 'Invalid image format. Must be a base64-encoded image.' });
         }
         
         // Конвертируем base64 в buffer
@@ -100,7 +119,7 @@ app.post('/api/save-work', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Ошибка сохранения работы:', error);
+        console.error('[ERROR] Ошибка сохранения работы:', error);
         res.status(500).json({ 
             error: 'Ошибка сохранения работы',
             details: error.message 
@@ -118,7 +137,7 @@ app.get('/api/works', async (req, res) => {
             total: works.length
         });
     } catch (error) {
-        console.error('Ошибка получения работ:', error);
+        console.error('[ERROR] Ошибка получения работ:', error);
         res.status(500).json({ 
             error: 'Ошибка получения работ',
             details: error.message 
@@ -138,7 +157,7 @@ app.get('/api/works/:id', async (req, res) => {
         
         res.json(metadata);
     } catch (error) {
-        console.error('Ошибка получения работы:', error);
+        console.error('[ERROR] Ошибка получения работы:', error);
         res.status(500).json({ error: 'Failed to get work' });
     }
 });
@@ -150,7 +169,7 @@ app.get('/api/works/:id/image', async (req, res) => {
         const imagePath = await fileManager.getImagePath(id);
         res.sendFile(imagePath);
     } catch (error) {
-        console.error('Ошибка отправки изображения:', error);
+        console.error('[ERROR] Ошибка отправки изображения:', error);
         res.status(404).json({ 
             error: 'Изображение не найдено',
             details: error.message 
@@ -167,7 +186,7 @@ app.get('/api/works/:id/download', async (req, res) => {
         
         res.download(imagePath, `sojmieblo_${id}.jpg`);
     } catch (error) {
-        console.error('Ошибка скачивания работы:', error);
+        console.error('[ERROR] Ошибка скачивания работы:', error);
         res.status(404).json({ 
             error: 'Работа не найдена',
             details: error.message 
@@ -182,7 +201,7 @@ app.get('/api/works/:id/thumbnail', async (req, res) => {
         const thumbnailPath = await fileManager.getThumbnailPath(id);
         res.sendFile(thumbnailPath);
     } catch (error) {
-        console.error('Ошибка отправки миниатюры:', error);
+        console.error('[ERROR] Ошибка отправки миниатюры:', error);
         res.status(404).json({ 
             error: 'Миниатюра не найдена',
             details: error.message 
@@ -201,7 +220,7 @@ app.delete('/api/works/:id', async (req, res) => {
             id 
         });
     } catch (error) {
-        console.error('Ошибка удаления работы:', error);
+        console.error('[ERROR] Ошибка удаления работы:', error);
         res.status(500).json({ 
             error: 'Ошибка удаления работы',
             details: error.message 
@@ -218,7 +237,7 @@ app.get('/api/stats', async (req, res) => {
             stats
         });
     } catch (error) {
-        console.error('Ошибка получения статистики:', error);
+        console.error('[ERROR] Ошибка получения статистики:', error);
         res.status(500).json({ 
             error: 'Ошибка получения статистики',
             details: error.message 
@@ -233,22 +252,22 @@ app.get('/', (req, res) => {
 
 // Запуск сервера
 const server = app.listen(PORT, () => {
-    console.log(`🚀 Сервер Sojmieblo запущен на http://localhost:${PORT}`);
-    console.log(`📁 Директория работ: ${fileManager.worksDir}`);
+    console.log(`[INFO] 🚀 Сервер Sojmieblo запущен на http://localhost:${PORT}`);
+    console.log(`[INFO] 📁 Директория работ: ${fileManager.worksDir}`);
 });
 
 // Graceful shutdown
 const gracefulShutdown = () => {
-    console.log('SIGTERM получен, закрываем сервер...');
+    console.log('[INFO] SIGTERM получен, закрываем сервер...');
     server.close(() => {
-        console.log('Сервер закрыт');
+        console.log('[INFO] Сервер закрыт');
         fileManager.stopAutoCleanup();
         process.exit(0);
     });
     
     // Форсированное завершение через 10 секунд
     setTimeout(() => {
-        console.error('Не удалось закрыть соединения вовремя, форсируем завершение');
+        console.error('[ERROR] Не удалось закрыть соединения вовремя, форсируем завершение');
         process.exit(1);
     }, 10000);
 };

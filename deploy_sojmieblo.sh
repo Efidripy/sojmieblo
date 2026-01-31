@@ -728,9 +728,7 @@ log_message "Application dependencies installed successfully"
 
 # Step 4: Modify server.js to use new frontend path
 log_message "Modifying server.js..."
-sed -i 's/const port = .*;/const port = 777;/' $BACKEND_DIR/server.js || error_exit "Failed to modify server.js"
-# Hostname modification is optional - some versions may not have this line
-sed -i 's/const hostname = .*;/const hostname = "127.0.0.1";/' $BACKEND_DIR/server.js 2>/dev/null || log_message "Hostname line not found in server.js (skipping)"
+sed -i 's/const PORT = .*;/const PORT = 777;/' $BACKEND_DIR/server.js || error_exit "Failed to modify server.js"
 sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" $BACKEND_DIR/server.js || error_exit "Failed to update frontend path in server.js"
 
 # Step 5: Setup Systemd Service
