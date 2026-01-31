@@ -42,8 +42,8 @@ const CONFIG = {
     
     // Параметры загрузки файлов
     upload: {
-        // Максимальный размер файла в байтах (10MB)
-        maxFileSize: 10 * 1024 * 1024,
+        // Максимальный размер файла в байтах (30MB)
+        maxFileSize: 30 * 1024 * 1024,
         
         // Допустимые типы файлов
         acceptedTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'],

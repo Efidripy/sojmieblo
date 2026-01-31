@@ -11,8 +11,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Увеличиваем лимит для загрузки больших изображений
-app.use(express.json({ limit: '30mb' }));
-app.use(express.urlencoded({ limit: '30mb', extended: true }));
+// Используем 50mb для express.json чтобы покрыть base64 инфляцию (~33% оверхед)
+// Фронтенд лимит: 30MB бинарных данных -> ~40MB base64
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Инициализация FileManager
 const fileManager = new FileManager(__dirname);
