@@ -1,9 +1,9 @@
-// Main application logic for Sojmieblo
+// Основная логика приложения Sojmieblo
 let canvas, gl, texture;
 let originalImage;
 let isImageLoaded = false;
 
-// DOM elements
+// DOM элементы
 const uploadSection = document.getElementById('uploadSection');
 const canvasContainer = document.getElementById('canvasContainer');
 const fileInput = document.getElementById('fileInput');
@@ -12,7 +12,7 @@ const resetBtn = document.getElementById('resetBtn');
 const changeBtn = document.getElementById('changeBtn');
 const glCanvas = document.getElementById('glCanvas');
 
-// Initialize event listeners
+// Инициализация обработчиков событий
 uploadBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', handleFileSelect);
 resetBtn.addEventListener('click', resetImage);
@@ -22,7 +22,7 @@ changeBtn.addEventListener('click', () => {
     isImageLoaded = false;
 });
 
-// Drag and drop functionality
+// Функциональность перетаскивания файлов
 uploadSection.addEventListener('dragover', (e) => {
     e.preventDefault();
     uploadSection.classList.add('dragover');
@@ -41,7 +41,7 @@ uploadSection.addEventListener('drop', (e) => {
     }
 });
 
-// Handle file selection
+// Обработка выбора файла
 function handleFileSelect(e) {
     const file = e.target.files[0];
     if (file) {
@@ -49,7 +49,7 @@ function handleFileSelect(e) {
     }
 }
 
-// Handle file upload
+// Обработка загрузки файла
 function handleFile(file) {
     if (!file.type.match('image.*')) {
         alert('Пожалуйста, выберите файл изображения!');
@@ -71,22 +71,22 @@ function handleFile(file) {
     reader.readAsDataURL(file);
 }
 
-// Initialize WebGL canvas with glfx.js
+// Инициализация WebGL канваса с помощью glfx.js
 function initializeCanvas(img) {
     try {
-        // Create glfx canvas
+        // Создание glfx канваса
         canvas = fx.canvas();
         
-        // Replace the regular canvas with the glfx canvas
+        // Замена обычного канваса на glfx канвас
         const oldCanvas = document.getElementById('glCanvas');
         canvas.id = 'glCanvas';
         canvas.className = oldCanvas.className;
         oldCanvas.parentNode.replaceChild(canvas, oldCanvas);
         
-        // Load the texture
+        // Загрузка текстуры
         texture = canvas.texture(img);
         
-        // Set canvas size to match image while maintaining aspect ratio
+        // Установка размера канваса с сохранением пропорций изображения
         const maxWidth = 800;
         const maxHeight = 600;
         let width = img.width;
@@ -101,19 +101,19 @@ function initializeCanvas(img) {
         canvas.width = width;
         canvas.height = height;
         
-        // Draw initial image
+        // Отрисовка исходного изображения
         canvas.draw(texture).update();
         
-        // Add mouse interaction
+        // Добавление взаимодействия с мышью
         setupMouseInteraction();
         
     } catch (e) {
-        console.error('Error initializing canvas:', e);
+        console.error('Ошибка инициализации канваса:', e);
         alert('Ошибка инициализации WebGL. Убедитесь, что ваш браузер поддерживает WebGL.');
     }
 }
 
-// Setup mouse interaction for real-time deformation
+// Настройка взаимодействия с мышью для деформации в реальном времени
 function setupMouseInteraction() {
     let isMouseDown = false;
     let mouseX = 0;
@@ -124,7 +124,7 @@ function setupMouseInteraction() {
         mouseX = e.clientX - rect.left;
         mouseY = e.clientY - rect.top;
         
-        // Apply bulge/pinch effect in real-time
+        // Применение эффекта выпуклости/сжатия в реальном времени
         applyDeformation(mouseX, mouseY, false);
     });
     
@@ -146,40 +146,40 @@ function setupMouseInteraction() {
     });
 }
 
-// Apply bulge/pinch deformation effect
+// Применение эффекта выпуклости/сжатия
 function applyDeformation(x, y, isClick) {
     if (!texture || !canvas) return;
     
-    // Radius of effect (proportional to canvas size)
+    // Радиус эффекта (пропорционален размеру канваса)
     const radius = Math.min(canvas.width, canvas.height) * 0.2;
     
-    // Strength of effect (negative for pinch, positive for bulge)
-    const strength = isClick ? -0.8 : -0.5; // Pinch effect (negative value)
+    // Сила эффекта (отрицательная для сжатия, положительная для выпуклости)
+    const strength = isClick ? -0.8 : -0.5; // Эффект сжатия (отрицательное значение)
     
     try {
-        // Draw texture with bulge effect
+        // Отрисовка текстуры с эффектом выпуклости
         canvas.draw(texture)
             .bulgePinch(x, y, radius, strength)
             .update();
     } catch (e) {
-        console.error('Error applying deformation:', e);
+        console.error('Ошибка применения деформации:', e);
     }
 }
 
-// Reset image to original state
+// Сброс изображения в исходное состояние
 function resetImage() {
     if (!texture || !canvas) return;
     
     try {
         canvas.draw(texture).update();
     } catch (e) {
-        console.error('Error resetting image:', e);
+        console.error('Ошибка сброса изображения:', e);
     }
 }
 
-// Check if WebGL is supported
+// Проверка поддержки WebGL
 window.addEventListener('load', () => {
     if (!window.fx) {
-        console.warn('glfx.js not loaded, WebGL effects may not work');
+        console.warn('glfx.js не загружен, WebGL эффекты могут не работать');
     }
 });
