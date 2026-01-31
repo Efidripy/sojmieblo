@@ -151,6 +151,8 @@ install_app() {
     if [ -d "$INSTALL_DIR/.git" ]; then
         echo -e "${BLUE}🔄 Updating existing installation...${NC}"
         cd "$INSTALL_DIR"
+        # Reset local changes (including version number from previous install) to avoid merge conflicts
+        git reset --hard HEAD
         git pull origin main
     else
         echo -e "${BLUE}📦 Cloning repository...${NC}"
@@ -159,7 +161,7 @@ install_app() {
         cd "$INSTALL_DIR"
     fi
     
-    # Update version in package.json
+    # Update version in package.json (after git pull/clone to avoid conflicts)
     sed -i.bak 's/^  "version": ".*"/  "version": "'"${VERSION}"'"/' package.json
     
     # Install npm dependencies
