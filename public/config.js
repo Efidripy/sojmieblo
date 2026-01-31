@@ -30,31 +30,14 @@ const CONFIG = {
         updateInterval: 50
     },
     
-    // Параметры canvas
-    canvas: {
-        // Максимальные размеры для разных разрешений экрана
-        resolutions: {
-            '4K': {
-                minWidth: 3840,
-                maxWidth: 2400,
-                maxHeight: 1600
-            },
-            '2K': {
-                minWidth: 2560,
-                maxWidth: 1600,
-                maxHeight: 1200
-            },
-            'FullHD': {
-                minWidth: 1920,
-                maxWidth: 1200,
-                maxHeight: 900
-            },
-            'default': {
-                minWidth: 0,
-                maxWidth: 800,
-                maxHeight: 600
-            }
-        }
+    // Параметры превью изображений
+    preview: {
+        sizes: [
+            { name: '4K', width: 1920, minWindowWidth: 1920 },
+            { name: '2K', width: 1440, minWindowWidth: 1440 },
+            { name: 'FHD', width: 1280, minWindowWidth: 1280 },
+            { name: 'HD', width: 720, minWindowWidth: 0 }
+        ]
     },
     
     // Параметры загрузки файлов
