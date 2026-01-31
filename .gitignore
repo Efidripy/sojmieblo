@@ -2,3 +2,7 @@ node_modules/
 *.log
 .DS_Store
 .env
+
+# Release artifacts
+sojmieblo-release.tar.gz
+release-temp/
