@@ -64,6 +64,11 @@ class ImageConverter {
      * @returns {Promise<Buffer>} - JPEG буфер миниатюры
      */
     static async createThumbnail(inputBuffer, maxSize = 200) {
+        // Ensure input is valid
+        if (!inputBuffer || inputBuffer.length === 0) {
+            throw new Error('Empty image buffer');
+        }
+        
         try {
             const thumbnail = await sharp(inputBuffer)
                 .resize(maxSize, maxSize, {
