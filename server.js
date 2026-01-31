@@ -10,6 +10,7 @@ const FileManager = require('./utils/fileManager');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MAX_IMAGE_LENGTH = parseInt(process.env.MAX_IMAGE_LENGTH) || (50 * 1024 * 1024); // 50MB default
 
 // Увеличиваем лимит для загрузки больших изображений
 // Используем 50mb для express.json чтобы покрыть base64 инфляцию (~33% оверхед)
@@ -72,8 +73,7 @@ app.post('/api/save-work', async (req, res) => {
         }
         
         // Validate image length (reasonable base64 image size)
-        // Max 50MB base64 string (approximately 66.67MB binary due to base64 overhead)
-        const MAX_IMAGE_LENGTH = 50 * 1024 * 1024; // 50MB
+        // Configurable via MAX_IMAGE_LENGTH env var, defaults to 50MB
         if (image.length > MAX_IMAGE_LENGTH) {
             return res.status(400).json({ error: 'Image data too large' });
         }
