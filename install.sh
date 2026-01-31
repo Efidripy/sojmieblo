@@ -159,7 +159,7 @@ install_app() {
         cd "$INSTALL_DIR"
     fi
     
-    # Update version in package.json
+    # Update version in package.json (ПОСЛЕ git pull/clone)
     sed -i.bak 's/^  "version": ".*"/  "version": "'"${VERSION}"'"/' package.json
     
     # Install npm dependencies
