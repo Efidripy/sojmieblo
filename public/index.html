@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sojmieblo - Деформация лица</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sojmieblo</h1>
+        <p class="subtitle">Превратите селфи в мем за секунду!</p>
+        
+        <div class="upload-section" id="uploadSection">
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            <button class="upload-btn" id="uploadBtn">Загрузить фото</button>
+            <p class="hint">Или перетащите изображение сюда</p>
+        </div>
+
+        <div class="canvas-container" id="canvasContainer" style="display: none;">
+            <canvas id="glCanvas"></canvas>
+            <div class="controls">
+                <button class="reset-btn" id="resetBtn">Сбросить</button>
+                <button class="change-btn" id="changeBtn">Новое фото</button>
+            </div>
+            <p class="instruction">Наведите мышью на изображение, чтобы деформировать лицо</p>
+        </div>
+    </div>
+
+    <script src="glfx.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
