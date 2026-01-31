@@ -303,6 +303,14 @@ function setupMouseInteraction() {
     
     canvas.addEventListener('mousedown', (e) => {
         isMouseDown = true;
+        
+        // Reset to original on new click if there's existing deformation
+        if (hasDeformation) {
+            texture = canvas.texture(previewImage || originalImage);
+            canvas.draw(texture).update();
+            hasDeformation = false;
+        }
+        
         const rect = canvas.getBoundingClientRect();
         // Apply scaling to account for canvas display size vs actual size
         const scaleX = canvas.width / rect.width;
@@ -379,9 +387,15 @@ function applyDeformation(x, y) {
         // CRITICAL: Load current canvas state into texture before applying new deformation
         // This allows deformations to accumulate/stack instead of replacing each other
         texture.loadContentsOf(canvas);
+        
+        // Use negative strength for pinch/indent effect (like pressing with thumb)
+        const pinchStrength = -Math.abs(deformationStrength);
+        
         canvas.draw(texture)
-            .bulgePinch(x, y, brushRadius, deformationStrength)
+            .bulgePinch(x, y, brushRadius, pinchStrength)
             .update();
+            
+        hasDeformation = true;
     } catch (e) {
         console.error('Ошибка применения деформации:', e);
     }
