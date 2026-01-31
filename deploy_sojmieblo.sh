@@ -51,7 +51,7 @@ install_nodejs() {
     npm --version || error_exit "npm installation verification failed"
     
     log_message "Node.js $(node --version) and npm $(npm --version) installed successfully"
-    echo -e "${GREEN}[OK] ${NC}Node.js $(node --version) установлен успешно"
+    echo -e "${GREEN}[OK] ${NC}Node.js $(node --version) и npm $(npm --version) установлены успешно"
 }
 
 # Check if application is already installed
@@ -171,7 +171,7 @@ if command -v node &> /dev/null; then
     echo -e "${YELLOW}[INFO] ${NC}Node.js уже установлен: $CURRENT_NODE_VERSION"
     
     # Check if version is acceptable (v18 or higher)
-    NODE_MAJOR_VERSION=$(node -v | grep -oP '(?<=v)\d+' || echo "0")
+    NODE_MAJOR_VERSION=$(node -v | sed 's/v\([0-9]*\).*/\1/')
     
     # Validate that we got a numeric version
     if ! [[ "$NODE_MAJOR_VERSION" =~ ^[0-9]+$ ]]; then
@@ -271,7 +271,7 @@ echo "Информация об установке:"
 echo "  - Директория приложения: $APP_DIR"
 echo "  - Node.js версия: $(node --version)"
 echo "  - npm версия: $(npm --version)"
-echo "  - Git коммит: $(cd $APP_DIR && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+echo "  - Git коммит: $GIT_COMMIT"
 echo ""
 echo "Проверьте статус сервиса:"
 echo "  sudo systemctl status sojmieblo.service"
