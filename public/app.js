@@ -11,10 +11,6 @@ let deformationStrength = CONFIG.deformation.initialStrength;
 let mouseDownTime = 0;
 let mouseDownTimer = null;
 let hasDeformation = false; // Флаг для отслеживания изменений
-let lastDeformationX = 0;
-let lastDeformationY = 0;
-let lastDeformationRadius = 0;
-let lastDeformationStrength = 0;
 
 // Canvas для визуализации кисти
 let brushOverlay = null;
@@ -375,12 +371,6 @@ function applyDeformation(x, y) {
     if (!texture || !canvas) return;
     
     try {
-        // Сохраняем параметры последней деформации
-        lastDeformationX = x;
-        lastDeformationY = y;
-        lastDeformationRadius = brushRadius;
-        lastDeformationStrength = deformationStrength;
-        
         // Используем brushRadius напрямую
         // Центр деформации всегда под курсором (x, y)
         canvas.draw(texture)
