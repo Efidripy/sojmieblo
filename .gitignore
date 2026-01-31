@@ -6,3 +6,6 @@ node_modules/
 # Release artifacts
 sojmieblo-release.tar.gz
 release-temp/
+
+# Works directory (uploaded images)
+works/
