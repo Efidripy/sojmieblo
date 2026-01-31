@@ -382,10 +382,9 @@ function applyDeformation(x, y) {
     if (!texture || !canvas) return;
     
     try {
-        // Используем brushRadius напрямую
-        // Центр деформации всегда под курсором (x, y)
-        // CRITICAL: Load current canvas state into texture before applying new deformation
-        // This allows deformations to accumulate/stack instead of replacing each other
+        // Load current canvas state to allow deformations to accumulate during mousemove
+        // Note: On mousedown, the canvas is reset first (lines 308-311), so this preserves
+        // state only while dragging (mousemove), not across separate clicks
         texture.loadContentsOf(canvas);
         
         // Use negative strength for pinch/indent effect (like pressing with thumb)
