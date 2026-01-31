@@ -79,51 +79,48 @@ app.post('/api/save-work', async (req, res) => {
         // Создаем миниатюру
         const thumbnailBuffer = await ImageConverter.createThumbnail(jpegBuffer, 200);
         
-        // Генерируем имя файла
-        const fileName = fileManager.generateFileName('jpg');
-        const workId = path.parse(fileName).name; // ID без расширения
-        
-        // Сохраняем файлы
-        await fileManager.saveFile(fileName, jpegBuffer, false);
-        await fileManager.saveFile(fileName, thumbnailBuffer, true);
-        
-        // Создаем метаданные
-        const workMetadata = {
-            id: workId,
-            fileName: fileName,
-            createdAt: new Date().toISOString(),
-            imageInfo: {
-                width: imageInfo.width,
-                height: imageInfo.height,
-                format: 'jpeg'
-            },
-            userMetadata: metadata || {}
-        };
-        
-        // Сохраняем метаданные
-        await fileManager.saveMetadata(workId, workMetadata);
-        
-        console.log(`Работа сохранена: ${fileName}`);
-        
+        // Сохраняем работу
+        const result = await fileManager.saveWork(
+            jpegBuffer,
+            thumbnailBuffer,
+            {
+                originalWidth: imageInfo.width,
+                originalHeight: imageInfo.height,
+                format: imageInfo.format,
+                userMetadata: metadata
+            }
+        );
+
         res.json({
             success: true,
-            work: workMetadata
+            message: 'Работа успешно сохранена',
+            work: result
         });
-        
+
     } catch (error) {
         console.error('Ошибка сохранения работы:', error);
-        res.status(500).json({ error: 'Failed to save work' });
+        res.status(500).json({ 
+            error: 'Ошибка сохранения работы',
+            details: error.message 
+        });
     }
 });
 
 // API: Получить список всех работ
 app.get('/api/works', async (req, res) => {
     try {
-        const works = await fileManager.getAllWorks();
-        res.json({ works });
+        const works = await fileManager.getWorks();
+        res.json({
+            success: true,
+            works,
+            total: works.length
+        });
     } catch (error) {
-        console.error('Ошибка получения списка работ:', error);
-        res.status(500).json({ error: 'Failed to get works' });
+        console.error('Ошибка получения работ:', error);
+        res.status(500).json({ 
+            error: 'Ошибка получения работ',
+            details: error.message 
+        });
     }
 });
 
@@ -144,20 +141,35 @@ app.get('/api/works/:id', async (req, res) => {
     }
 });
 
+// API: Получить изображение работы
+app.get('/api/works/:id/image', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const imagePath = await fileManager.getImagePath(id);
+        res.sendFile(imagePath);
+    } catch (error) {
+        console.error('Ошибка отправки изображения:', error);
+        res.status(404).json({ 
+            error: 'Изображение не найдено',
+            details: error.message 
+        });
+    }
+});
+
 // API: Скачать работу (полное изображение)
 app.get('/api/works/:id/download', async (req, res) => {
     try {
         const { id } = req.params;
-        const fileName = `${id}.jpg`;
-        const filePath = fileManager.getFilePath(fileName, false);
+        const work = await fileManager.getWork(id);
+        const imagePath = await fileManager.getImagePath(id);
         
-        // Проверяем существование файла
-        await fs.access(filePath);
-        
-        res.download(filePath, fileName);
+        res.download(imagePath, `sojmieblo_${id}.jpg`);
     } catch (error) {
         console.error('Ошибка скачивания работы:', error);
-        res.status(404).json({ error: 'Work not found' });
+        res.status(404).json({ 
+            error: 'Работа не найдена',
+            details: error.message 
+        });
     }
 });
 
@@ -165,16 +177,14 @@ app.get('/api/works/:id/download', async (req, res) => {
 app.get('/api/works/:id/thumbnail', async (req, res) => {
     try {
         const { id } = req.params;
-        const fileName = `${id}.jpg`;
-        const filePath = fileManager.getFilePath(fileName, true);
-        
-        // Проверяем существование файла
-        await fs.access(filePath);
-        
-        res.sendFile(filePath);
+        const thumbnailPath = await fileManager.getThumbnailPath(id);
+        res.sendFile(thumbnailPath);
     } catch (error) {
-        console.error('Ошибка получения миниатюры:', error);
-        res.status(404).json({ error: 'Thumbnail not found' });
+        console.error('Ошибка отправки миниатюры:', error);
+        res.status(404).json({ 
+            error: 'Миниатюра не найдена',
+            details: error.message 
+        });
     }
 });
 
@@ -182,16 +192,35 @@ app.get('/api/works/:id/thumbnail', async (req, res) => {
 app.delete('/api/works/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const success = await fileManager.deleteWork(id);
-        
-        if (!success) {
-            return res.status(404).json({ error: 'Work not found' });
-        }
-        
-        res.json({ success: true });
+        await fileManager.deleteWork(id);
+        res.json({ 
+            success: true, 
+            message: 'Работа успешно удалена',
+            id 
+        });
     } catch (error) {
         console.error('Ошибка удаления работы:', error);
-        res.status(500).json({ error: 'Failed to delete work' });
+        res.status(500).json({ 
+            error: 'Ошибка удаления работы',
+            details: error.message 
+        });
+    }
+});
+
+// API: Статистика хранилища
+app.get('/api/stats', async (req, res) => {
+    try {
+        const stats = await fileManager.getStats();
+        res.json({
+            success: true,
+            stats
+        });
+    } catch (error) {
+        console.error('Ошибка получения статистики:', error);
+        res.status(500).json({ 
+            error: 'Ошибка получения статистики',
+            details: error.message 
+        });
     }
 });
 
@@ -202,14 +231,15 @@ app.get('/', (req, res) => {
 
 // Запуск сервера
 const server = app.listen(PORT, () => {
-    console.log(`Сервер Sojmieblo запущен на http://localhost:${PORT}`);
+    console.log(`🚀 Сервер Sojmieblo запущен на http://localhost:${PORT}`);
+    console.log(`📁 Директория работ: ${fileManager.worksDir}`);
 });
 
 // Graceful shutdown
 const gracefulShutdown = () => {
-    console.log('Получен сигнал завершения, закрываем сервер...');
+    console.log('SIGTERM получен, закрываем сервер...');
     server.close(() => {
-        console.log('HTTP сервер закрыт');
+        console.log('Сервер закрыт');
         fileManager.stopAutoCleanup();
         process.exit(0);
     });
