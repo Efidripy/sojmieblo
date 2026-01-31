@@ -4,23 +4,23 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Rate limiting middleware to prevent abuse
+// Middleware для ограничения количества запросов (защита от злоупотреблений)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: 15 * 60 * 1000, // 15 минут
+  max: 100, // Максимум 100 запросов с одного IP за период windowMs
+  message: 'Слишком много запросов с вашего IP-адреса. Пожалуйста, попробуйте позже.'
 });
 
 app.use(limiter);
 
-// Serve static files from public directory
+// Раздача статических файлов из директории public
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Main route
+// Главный маршрут
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Sojmieblo server running on http://localhost:${PORT}`);
+  console.log(`Сервер Sojmieblo запущен на http://localhost:${PORT}`);
 });
