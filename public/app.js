@@ -16,6 +16,10 @@ let hasDeformation = false; // Флаг для отслеживания изме
 let brushOverlay = null;
 let brushCtx = null;
 
+// Глобальные координаты мыши для resize handler
+let currentMouseX = undefined;
+let currentMouseY = undefined;
+
 // DOM элементы
 const uploadSection = document.getElementById('uploadSection');
 const canvasContainer = document.getElementById('canvasContainer');
@@ -243,6 +247,26 @@ function createBrushOverlay() {
     canvas.parentElement.appendChild(brushOverlay);
 }
 
+// НОВОЕ: Обработчик resize для синхронизации brushOverlay
+window.addEventListener('resize', () => {
+    if (canvas && brushOverlay) {
+        const rect = canvas.getBoundingClientRect();
+        
+        // Обновить размер overlay чтобы соответствовал canvas
+        brushOverlay.width = canvas.width;
+        brushOverlay.height = canvas.height;
+        
+        // Обновить CSS размеры
+        brushOverlay.style.width = rect.width + 'px';
+        brushOverlay.style.height = rect.height + 'px';
+        
+        // Перерисовать кисть если курсор на canvas
+        if (currentMouseX !== undefined && currentMouseY !== undefined) {
+            drawBrush(currentMouseX, currentMouseY, brushRadius);
+        }
+    }
+});
+
 // Отрисовка круга кисти с мягкими краями
 function drawBrush(x, y, radius) {
     if (!brushCtx) return;
@@ -250,24 +274,28 @@ function drawBrush(x, y, radius) {
     // Очищаем canvas
     brushCtx.clearRect(0, 0, brushOverlay.width, brushOverlay.height);
     
-    // Создаем радиальный градиент для мягких краев, центр точно на координатах курсора
+    // Основной круг (размытый)
     const gradient = brushCtx.createRadialGradient(x, y, 0, x, y, radius);
-    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.06)');     // Центр - 6% прозрачности (было 30%, теперь 30/5)
-    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.03)');   // 70% радиуса - 3% (было 15%, теперь 15/5)
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');        // Края - полностью прозрачно
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.08)');     // Центр немного темнее
+    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.03)');   // Середина
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');        // Край прозрачный
     
-    // Рисуем круг с центром точно в позиции курсора
     brushCtx.fillStyle = gradient;
     brushCtx.beginPath();
     brushCtx.arc(x, y, radius, 0, Math.PI * 2);
     brushCtx.fill();
     
-    // Убираем черную обводку - показываем только градиент размытия
-    // brushCtx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
-    // brushCtx.lineWidth = 2;
-    // brushCtx.beginPath();
-    // brushCtx.arc(x, y, radius, 0, Math.PI * 2);
-    // brushCtx.stroke();
+    // НОВОЕ: Яркий центр (+15% opacity)
+    const centerRadius = radius * 0.25; // 25% от основного радиуса
+    const centerGradient = brushCtx.createRadialGradient(x, y, 0, x, y, centerRadius);
+    centerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.20)'); // Белый яркий центр
+    centerGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.10)');
+    centerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    
+    brushCtx.fillStyle = centerGradient;
+    brushCtx.beginPath();
+    brushCtx.arc(x, y, centerRadius, 0, Math.PI * 2);
+    brushCtx.fill();
 }
 
 // Скрыть кисть
@@ -289,6 +317,10 @@ function setupMouseInteraction() {
         const scaleY = canvas.height / rect.height;
         mouseX = (e.clientX - rect.left) * scaleX;
         mouseY = (e.clientY - rect.top) * scaleY;
+        
+        // Store globally for resize handler
+        currentMouseX = mouseX;
+        currentMouseY = mouseY;
         
         // Отображаем кисть
         drawBrush(mouseX, mouseY, brushRadius);
@@ -350,6 +382,10 @@ function setupMouseInteraction() {
         deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
         hideBrush(); // Скрываем кисть при выходе мыши
+        
+        // Clear global mouse coordinates
+        currentMouseX = undefined;
+        currentMouseY = undefined;
     });
     
     // Изменение ширины кисти колесиком мыши
@@ -382,12 +418,8 @@ function applyDeformation(x, y) {
     if (!texture || !canvas) return;
     
     try {
-        // Load current canvas state to allow deformations to accumulate during mousemove
-        // Note: On mousedown, the canvas is reset first (lines 308-311), so this preserves
-        // state only while dragging (mousemove), not across separate clicks
-        texture.loadContentsOf(canvas);
-        
-        // Use negative strength for pinch/indent effect (like pressing with thumb)
+        // УБРАТЬ loadContentsOf для сброса при новом клике
+        // Отрицательный strength = вдавливание (pinch effect)
         const pinchStrength = -Math.abs(deformationStrength);
         
         canvas.draw(texture)
