@@ -334,6 +334,22 @@ function setupMouseInteraction() {
     });
     
     canvas.addEventListener('mousedown', (e) => {
+        // Only respond to left mouse button AND clicks inside canvas
+        if (e.button !== 0) {
+            console.log('Mousedown ignored: not left button (button=' + e.button + ')');
+            return;
+        }
+        
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        
+        // Check if click is inside canvas bounds
+        if (clickX < 0 || clickX > rect.width || clickY < 0 || clickY > rect.height) {
+            console.log('Mousedown ignored: click outside canvas bounds');
+            return;
+        }
+        
         isMouseDown = true;
         
         // Reset to original on new click if there's existing deformation
@@ -343,12 +359,11 @@ function setupMouseInteraction() {
             hasDeformation = false;
         }
         
-        const rect = canvas.getBoundingClientRect();
         // Apply scaling to account for canvas display size vs actual size
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        mouseX = (e.clientX - rect.left) * scaleX;
-        mouseY = (e.clientY - rect.top) * scaleY;
+        mouseX = clickX * scaleX;
+        mouseY = clickY * scaleY;
         
         mouseDownTime = Date.now();
         
