@@ -23,6 +23,37 @@ error_exit() {
     exit 1
 }
 
+# Function to install Node.js 20.x LTS
+install_nodejs() {
+    log_message "Installing Node.js 20.x LTS..."
+    
+    # Remove old versions
+    apt-get remove -y nodejs npm 2>/dev/null || true
+    
+    # Install prerequisites
+    apt-get update
+    apt-get install -y ca-certificates curl gnupg || error_exit "Failed to install prerequisites"
+    
+    # Add NodeSource GPG key
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg || error_exit "Failed to add NodeSource GPG key"
+    
+    # Add NodeSource repository for Node.js 20.x
+    NODE_MAJOR=20
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list || error_exit "Failed to add NodeSource repository"
+    
+    # Install Node.js
+    apt-get update
+    apt-get install -y nodejs || error_exit "Node.js installation failed"
+    
+    # Verify installation
+    node --version || error_exit "Node.js installation verification failed"
+    npm --version || error_exit "npm installation verification failed"
+    
+    log_message "Node.js $(node --version) and npm $(npm --version) installed successfully"
+    echo -e "${GREEN}[OK] ${NC}Node.js $(node --version) установлен успешно"
+}
+
 # Check if application is already installed
 check_existing_installation() {
     if [ -f "$MARKER_FILE" ]; then
@@ -74,11 +105,8 @@ remove_existing_installation() {
     rm -f /etc/nginx/sites-available/sojmieblo
     systemctl reload nginx 2>/dev/null || true
     
-    # Remove application directory
+    # Remove application directory (this also removes the marker file inside)
     rm -rf $APP_DIR
-    
-    # Remove marker file
-    rm -f $MARKER_FILE
     
     log_message "Существующая установка удалена"
     echo -e "${GREEN}[OK] ${NC}Существующая установка удалена"
@@ -101,7 +129,7 @@ update_existing_installation() {
     # Backup current version
     BACKUP_DIR="/tmp/sojmieblo_backup_$(date +%Y%m%d_%H%M%S)"
     mkdir -p $BACKUP_DIR
-    cp -r $APP_DIR/* $BACKUP_DIR/ || log_message "Warning: Backup creation failed"
+    cp -r $APP_DIR/. $BACKUP_DIR/ || log_message "Warning: Backup creation failed"
     log_message "Backup created at $BACKUP_DIR"
     
     # Pull latest changes
@@ -143,7 +171,12 @@ if command -v node &> /dev/null; then
     echo -e "${YELLOW}[INFO] ${NC}Node.js уже установлен: $CURRENT_NODE_VERSION"
     
     # Check if version is acceptable (v18 or higher)
-    NODE_MAJOR_VERSION=$(node -v | cut -d'.' -f1 | sed 's/v//')
+    NODE_MAJOR_VERSION=$(node -v | grep -oP '(?<=v)\d+' || echo "0")
+    
+    # Validate that we got a numeric version
+    if ! [[ "$NODE_MAJOR_VERSION" =~ ^[0-9]+$ ]]; then
+        NODE_MAJOR_VERSION=0
+    fi
     
     if [ "$NODE_MAJOR_VERSION" -ge 18 ]; then
         echo -e "${GREEN}[OK] ${NC}Версия Node.js совместима ($CURRENT_NODE_VERSION)"
@@ -164,37 +197,6 @@ else
     echo -e "${YELLOW}[INFO] ${NC}Node.js не установлен. Начинаем установку..."
     install_nodejs
 fi
-
-# Function to install Node.js 20.x LTS
-install_nodejs() {
-    log_message "Installing Node.js 20.x LTS..."
-    
-    # Remove old versions
-    apt-get remove -y nodejs npm 2>/dev/null || true
-    
-    # Install prerequisites
-    apt-get update
-    apt-get install -y ca-certificates curl gnupg || error_exit "Failed to install prerequisites"
-    
-    # Add NodeSource GPG key
-    mkdir -p /etc/apt/keyrings
-    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg || error_exit "Failed to add NodeSource GPG key"
-    
-    # Add NodeSource repository for Node.js 20.x
-    NODE_MAJOR=20
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list || error_exit "Failed to add NodeSource repository"
-    
-    # Install Node.js
-    apt-get update
-    apt-get install -y nodejs || error_exit "Node.js installation failed"
-    
-    # Verify installation
-    node --version || error_exit "Node.js installation verification failed"
-    npm --version || error_exit "npm installation verification failed"
-    
-    log_message "Node.js $(node --version) and npm $(npm --version) installed successfully"
-    echo -e "${GREEN}[OK] ${NC}Node.js $(node --version) установлен успешно"
-}
 
 # Step 3: Install application dependencies
 log_message "Installing application dependencies..."
@@ -254,7 +256,8 @@ systemctl start sojmieblo.service || error_exit "Failed to start Sojmieblo servi
 
 # Create marker file to indicate successful installation
 echo "Installed: $(date)" > $MARKER_FILE
-echo "Version: $(cd $APP_DIR && git rev-parse --short HEAD)" >> $MARKER_FILE
+GIT_COMMIT=$(cd $APP_DIR && git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+echo "Version: $GIT_COMMIT" >> $MARKER_FILE
 log_message "Deployment marker created at $MARKER_FILE"
 
 # Installation Summary
@@ -268,7 +271,7 @@ echo "Информация об установке:"
 echo "  - Директория приложения: $APP_DIR"
 echo "  - Node.js версия: $(node --version)"
 echo "  - npm версия: $(npm --version)"
-echo "  - Git коммит: $(cd $APP_DIR && git rev-parse --short HEAD)"
+echo "  - Git коммит: $(cd $APP_DIR && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
 echo ""
 echo "Проверьте статус сервиса:"
 echo "  sudo systemctl status sojmieblo.service"
