@@ -53,7 +53,7 @@ class ImageConverter {
             return outputBuffer;
         } catch (error) {
             console.error('Ошибка конвертации изображения:', error);
-            throw new Error('Failed to convert image to JPEG');
+            throw new Error(`Failed to convert to JPEG: ${error.message}`);
         }
     }
 
@@ -80,7 +80,7 @@ class ImageConverter {
             return thumbnail;
         } catch (error) {
             console.error('Ошибка создания миниатюры:', error);
-            throw new Error('Failed to create thumbnail');
+            throw new Error(`Failed to create thumbnail: ${error.message}`);
         }
     }
 
@@ -90,9 +90,11 @@ class ImageConverter {
      * @returns {Buffer} - Буфер изображения
      */
     static base64ToBuffer(base64String) {
-        // Удаляем префикс data:image/...;base64,
-        const base64Data = base64String.replace(/^data:image\/\w+;base64,/, '');
-        return Buffer.from(base64Data, 'base64');
+        const matches = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+            throw new Error('Invalid base64 string format');
+        }
+        return Buffer.from(matches[2], 'base64');
     }
 
     /**
@@ -111,11 +113,32 @@ class ImageConverter {
                 channels: metadata.channels,
                 depth: metadata.depth,
                 hasAlpha: metadata.hasAlpha,
-                orientation: metadata.orientation
+                orientation: metadata.orientation,
+                size: inputBuffer.length
             };
         } catch (error) {
             console.error('Ошибка получения информации об изображении:', error);
-            throw new Error('Failed to get image info');
+            throw new Error(`Failed to get image info: ${error.message}`);
+        }
+    }
+
+    /**
+     * Изменяет размер изображения с сохранением пропорций
+     * @param {Buffer} buffer - Исходный буфер
+     * @param {number} maxWidth - Максимальная ширина
+     * @param {number} maxHeight - Максимальная высота
+     * @returns {Buffer} - Измененный буфер
+     */
+    static async resize(buffer, maxWidth, maxHeight) {
+        try {
+            return await sharp(buffer)
+                .resize(maxWidth, maxHeight, {
+                    fit: 'inside',
+                    withoutEnlargement: true
+                })
+                .toBuffer();
+        } catch (error) {
+            throw new Error(`Failed to resize image: ${error.message}`);
         }
     }
 }
