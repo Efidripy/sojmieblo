@@ -69,13 +69,9 @@ class WorkManager {
     }
 
     // Скачать работу
-    async downloadWork(workId) {
-        try {
-            window.location.href = `/api/works/${workId}/download`;
-        } catch (error) {
-            console.error('Ошибка скачивания работы:', error);
-            this.showNotification('✗ Ошибка скачивания', true);
-        }
+    downloadWork(workId) {
+        // Используем прямое перенаправление для скачивания файла
+        window.location.href = `/api/works/${workId}/download`;
     }
 
     // Удалить работу
@@ -221,9 +217,10 @@ class WorkManager {
         const now = new Date();
         const diff = now - date;
         
-        // Если дата в будущем
+        // Если дата в будущем (возможная ошибка данных)
         if (diff < 0) {
-            return 'Только что';
+            console.warn('Future timestamp detected:', isoString);
+            return 'Некорректная дата';
         }
         
         // Менее минуты назад
