@@ -66,6 +66,50 @@ class FileManager {
     }
 
     /**
+     * Сохраняет работу (изображение + метаданные)
+     * @param {Buffer} imageBuffer - Буфер изображения
+     * @param {Buffer} thumbnailBuffer - Буфер миниатюры
+     * @param {Object} metadata - Дополнительные метаданные
+     * @returns {Object} - Информация о сохранённой работе
+     */
+    async saveWork(imageBuffer, thumbnailBuffer, metadata = {}) {
+        try {
+            const fileName = this.generateFileName('jpg');
+            const workId = path.parse(fileName).name;
+            
+            // Пути к файлам
+            const imagePath = path.join(this.worksDir, fileName);
+            const thumbnailPath = path.join(this.thumbsDir, fileName);
+            const metaPath = path.join(this.worksDir, `${workId}.json`);
+
+            // Сохраняем файлы параллельно
+            await Promise.all([
+                fs.writeFile(imagePath, imageBuffer),
+                fs.writeFile(thumbnailPath, thumbnailBuffer),
+                fs.writeFile(metaPath, JSON.stringify({
+                    id: workId,
+                    fileName,
+                    createdAt: new Date().toISOString(),
+                    size: imageBuffer.length,
+                    thumbnailSize: thumbnailBuffer.length,
+                    ...metadata
+                }, null, 2))
+            ]);
+
+            console.log(`✅ Work saved: ${workId}`);
+
+            return {
+                id: workId,
+                fileName,
+                imagePath: `/api/works/${workId}/image`,
+                thumbnailPath: `/api/works/${workId}/thumbnail`
+            };
+        } catch (error) {
+            throw new Error(`Failed to save work: ${error.message}`);
+        }
+    }
+
+    /**
      * Сохранить метаданные работы
      * @param {String} workId - ID работы (имя файла без расширения)
      * @param {Object} metadata - Метаданные
@@ -87,8 +131,10 @@ class FileManager {
      * Получить список всех работ
      * @returns {Promise<Array>} - Массив работ
      */
-    async getAllWorks() {
+    async getWorks() {
         try {
+            await this.initialize(); // Убедимся что папка существует
+            
             const files = await fs.readdir(this.worksDir);
             
             // Фильтруем только JSON файлы
@@ -119,11 +165,19 @@ class FileManager {
     }
 
     /**
-     * Получить метаданные работы
-     * @param {String} workId - ID работы
-     * @returns {Promise<Object|null>} - Метаданные или null
+     * Получить список всех работ (alias for getWorks)
+     * @returns {Promise<Array>} - Массив работ
      */
-    async getWorkMetadata(workId) {
+    async getAllWorks() {
+        return this.getWorks();
+    }
+
+    /**
+     * Получает конкретную работу по ID
+     * @param {string} id - ID работы
+     * @returns {Object} - Метаданные работы
+     */
+    async getWork(workId) {
         const metadataPath = path.join(this.worksDir, `${workId}.json`);
         
         try {
@@ -131,6 +185,19 @@ class FileManager {
             return JSON.parse(content);
         } catch (error) {
             console.error(`Ошибка чтения метаданных работы ${workId}:`, error);
+            throw new Error(`Work not found: ${workId}`);
+        }
+    }
+
+    /**
+     * Получить метаданные работы (alias for getWork)
+     * @param {String} workId - ID работы
+     * @returns {Promise<Object|null>} - Метаданные или null
+     */
+    async getWorkMetadata(workId) {
+        try {
+            return await this.getWork(workId);
+        } catch (error) {
             return null;
         }
     }
@@ -147,29 +214,51 @@ class FileManager {
     }
 
     /**
+     * Получает путь к файлу изображения
+     * @param {string} id - ID работы
+     * @returns {string} - Абсолютный путь к файлу
+     */
+    async getImagePath(id) {
+        const work = await this.getWork(id);
+        return path.join(this.worksDir, work.fileName);
+    }
+
+    /**
+     * Получает путь к файлу миниатюры
+     * @param {string} id - ID работы
+     * @returns {string} - Абсолютный путь к миниатюре
+     */
+    async getThumbnailPath(id) {
+        const work = await this.getWork(id);
+        return path.join(this.thumbsDir, work.fileName);
+    }
+
+    /**
      * Удалить работу
      * @param {String} workId - ID работы
      * @returns {Promise<Boolean>} - Успешность удаления
      */
     async deleteWork(workId) {
         try {
+            const work = await this.getWork(workId);
+            
             // Удаляем основной файл
-            const imagePath = path.join(this.worksDir, `${workId}.jpg`);
+            const imagePath = path.join(this.worksDir, work.fileName);
             await fs.unlink(imagePath).catch(() => {});
             
             // Удаляем миниатюру
-            const thumbPath = path.join(this.thumbsDir, `${workId}.jpg`);
+            const thumbPath = path.join(this.thumbsDir, work.fileName);
             await fs.unlink(thumbPath).catch(() => {});
             
             // Удаляем метаданные
             const metadataPath = path.join(this.worksDir, `${workId}.json`);
             await fs.unlink(metadataPath).catch(() => {});
             
-            console.log(`Работа ${workId} удалена`);
+            console.log(`✅ Work deleted: ${workId}`);
             return true;
         } catch (error) {
             console.error(`Ошибка удаления работы ${workId}:`, error);
-            return false;
+            throw new Error(`Failed to delete work: ${error.message}`);
         }
     }
 
@@ -182,7 +271,7 @@ class FileManager {
         let deletedCount = 0;
         
         try {
-            const works = await this.getAllWorks();
+            const works = await this.getWorks();
             const now = Date.now();
             
             for (const work of works) {
@@ -190,8 +279,13 @@ class FileManager {
                 const age = now - createdAt;
                 
                 if (age > maxAge) {
-                    await this.deleteWork(work.id);
-                    deletedCount++;
+                    try {
+                        await this.deleteWork(work.id);
+                        deletedCount++;
+                        console.log(`🗑️ Auto-deleted old work: ${work.id} (age: ${Math.floor(age / (24 * 60 * 60 * 1000))} days)`);
+                    } catch (error) {
+                        console.error(`Failed to delete work ${work.id}:`, error);
+                    }
                 }
             }
             
@@ -207,23 +301,63 @@ class FileManager {
     }
 
     /**
-     * Запустить периодическую автоочистку
-     * @param {Number} intervalHours - Интервал в часах (по умолчанию 1)
+     * Запускает автоматическую очистку старых работ
+     * @param {number} hours - Интервал проверки в часах
+     * @param {number} maxAgeDays - Максимальный возраст работ в днях
      */
-    startAutoCleanup(intervalHours = 1) {
-        const intervalMs = intervalHours * 60 * 60 * 1000;
+    startAutoCleanup(hours = 24, maxAgeDays = 7) {
+        const intervalMs = hours * 60 * 60 * 1000;
+        const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+
+        console.log(`🗑️ Auto-cleanup started: check every ${hours}h, delete works older than ${maxAgeDays} days`);
         
         // Первая очистка через 10 секунд после старта
-        this.cleanupTimeout = setTimeout(() => {
-            this.cleanupOldFiles();
+        this.cleanupTimeout = setTimeout(async () => {
+            await this.cleanupOldFilesWithMaxAge(maxAgeMs);
         }, 10000);
         
         // Периодическая очистка
-        this.cleanupInterval = setInterval(() => {
-            this.cleanupOldFiles();
+        this.cleanupInterval = setInterval(async () => {
+            await this.cleanupOldFilesWithMaxAge(maxAgeMs);
         }, intervalMs);
+    }
+
+    /**
+     * Автоочистка файлов старше заданного возраста
+     * @param {Number} maxAgeMs - Максимальный возраст в миллисекундах
+     * @returns {Promise<Number>} - Количество удаленных файлов
+     */
+    async cleanupOldFilesWithMaxAge(maxAgeMs) {
+        let deletedCount = 0;
         
-        console.log(`Автоочистка файлов запущена (каждые ${intervalHours} ч)`);
+        try {
+            const works = await this.getWorks();
+            const now = Date.now();
+            
+            for (const work of works) {
+                const createdAt = new Date(work.createdAt).getTime();
+                const age = now - createdAt;
+                
+                if (age > maxAgeMs) {
+                    try {
+                        await this.deleteWork(work.id);
+                        deletedCount++;
+                        console.log(`🗑️ Auto-deleted old work: ${work.id} (age: ${Math.floor(age / (24 * 60 * 60 * 1000))} days)`);
+                    } catch (error) {
+                        console.error(`Failed to delete work ${work.id}:`, error);
+                    }
+                }
+            }
+            
+            if (deletedCount > 0) {
+                console.log(`Автоочистка: удалено ${deletedCount} файлов`);
+            }
+            
+            return deletedCount;
+        } catch (error) {
+            console.error('Auto-cleanup error:', error);
+            return 0;
+        }
     }
 
     /**
@@ -239,6 +373,32 @@ class FileManager {
             this.cleanupInterval = null;
         }
         console.log('Автоочистка файлов остановлена');
+    }
+
+    /**
+     * Получает статистику хранилища
+     * @returns {Object} - Статистика
+     */
+    async getStats() {
+        try {
+            const works = await this.getWorks();
+            const totalSize = works.reduce((sum, w) => sum + (w.size || 0), 0);
+
+            return {
+                totalWorks: works.length,
+                totalSize,
+                totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
+                oldestWork: works.length > 0 ? works[works.length - 1].createdAt : null,
+                newestWork: works.length > 0 ? works[0].createdAt : null
+            };
+        } catch (error) {
+            return {
+                totalWorks: 0,
+                totalSize: 0,
+                totalSizeMB: '0.00',
+                error: error.message
+            };
+        }
     }
 }
 
