@@ -89,6 +89,7 @@ h1 {
     border-radius: 20px;
     padding: 30px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    position: relative; /* Для позиционирования overlay элементов */
 }
 
 #glCanvas {
@@ -103,23 +104,29 @@ h1 {
 }
 
 .controls {
-    margin-top: 20px;
+    /* ИСПРАВЛЕНИЕ: Компактные мини-кнопки в левом верхнем углу как overlay */
+    position: absolute;
+    top: 15px;
+    left: 15px;
     display: flex;
-    gap: 15px;
-    justify-content: center;
-    flex-wrap: wrap;
+    gap: 8px;
+    flex-direction: column;
+    z-index: 20;
 }
 
 .reset-btn, .change-btn {
-    background: #f5f5f5; /* 4% черного */
-    color: #1a1a1a; /* 10% черного */
-    border: 2px solid #e6e6e6; /* 10% черного */
-    padding: 12px 30px;
-    font-size: 1em;
-    border-radius: 50px;
+    /* ИСПРАВЛЕНИЕ: Компактный стиль мини-кнопок для overlay */
+    background: rgba(245, 245, 245, 0.95); /* Полупрозрачный фон */
+    color: #1a1a1a;
+    border: 2px solid #e6e6e6;
+    padding: 8px 16px;
+    font-size: 0.85em;
+    border-radius: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
     font-weight: 500;
+    backdrop-filter: blur(5px);
+    white-space: nowrap;
 }
 
 .reset-btn:hover, .change-btn:hover {
@@ -136,37 +143,46 @@ h1 {
     margin-top: 15px;
     color: #666666; /* 40% черного */
     font-size: 0.95em;
+    clear: both;
 }
 
 /* Информация о параметрах */
 .parameters {
-    margin-top: 20px;
-    padding: 15px;
-    background: #fcfcfc; /* 2% черного */
-    border: 1px solid #f0f0f0; /* 6% черного */
+    /* ИСПРАВЛЕНИЕ: Параметры в правом верхнем углу как overlay */
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 12px 16px;
+    background: rgba(252, 252, 252, 0.95); /* Полупрозрачный фон */
+    border: 1px solid #f0f0f0;
     border-radius: 10px;
     display: flex;
-    gap: 30px;
-    justify-content: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 12px;
+    backdrop-filter: blur(5px);
+    z-index: 20;
 }
 
 .parameter {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
+    gap: 8px;
+    justify-content: space-between;
 }
 
 .parameter-label {
     color: #808080; /* 50% черного */
-    font-size: 0.85em;
-    margin-bottom: 5px;
+    font-size: 0.75em;
+    white-space: nowrap;
 }
 
 .parameter-value {
     color: #1a1a1a; /* 10% черного */
-    font-size: 1.2em;
+    font-size: 1em;
     font-weight: 600;
+    min-width: 40px;
+    text-align: right;
 }
 
 /* Drag and drop styling */
@@ -295,15 +311,18 @@ h1 {
 
 /* Кнопка сохранения */
 .save-btn {
-    background: #f5f5f5;
+    /* ИСПРАВЛЕНИЕ: Компактный стиль мини-кнопки для overlay */
+    background: rgba(245, 245, 245, 0.95);
     color: #1a1a1a;
     border: 2px solid #e6e6e6;
-    padding: 12px 30px;
-    font-size: 1em;
-    border-radius: 50px;
+    padding: 8px 16px;
+    font-size: 0.85em;
+    border-radius: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
     font-weight: 500;
+    backdrop-filter: blur(5px);
+    white-space: nowrap;
 }
 
 .save-btn:hover {
@@ -446,31 +465,34 @@ h1 {
 
 /* Улучшенная адаптивность для маленьких экранов */
 @media (max-width: 480px) {
-    /* Компактные кнопки */
+    /* ИСПРАВЛЕНИЕ: Адаптация overlay кнопок для мобильных */
     .controls {
-        gap: 8px;
-        margin-top: 15px;
+        top: 10px;
+        left: 10px;
+        gap: 6px;
     }
     
     .reset-btn, .save-btn, .change-btn {
-        padding: 10px 20px;
-        font-size: 0.9em;
-        border-radius: 30px;
+        padding: 6px 12px;
+        font-size: 0.8em;
+        border-radius: 15px;
     }
     
-    /* Компактные параметры */
+    /* ИСПРАВЛЕНИЕ: Адаптация overlay параметров для мобильных */
     .parameters {
-        gap: 15px;
-        padding: 10px;
-        margin-top: 15px;
+        top: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        gap: 8px;
     }
     
     .parameter-label {
-        font-size: 0.75em;
+        font-size: 0.7em;
     }
     
     .parameter-value {
-        font-size: 1em;
+        font-size: 0.9em;
+        min-width: 30px;
     }
     
     /* Меньше padding у canvas контейнера */
@@ -486,19 +508,24 @@ h1 {
 }
 
 @media (max-width: 360px) {
-    /* Экстра-маленькие экраны */
+    /* ИСПРАВЛЕНИЕ: Экстра-маленькие экраны - адаптация overlay */
     .controls {
-        gap: 6px;
+        gap: 5px;
+        top: 8px;
+        left: 8px;
     }
     
     .reset-btn, .save-btn, .change-btn {
-        padding: 8px 16px;
-        font-size: 0.85em;
+        padding: 5px 10px;
+        font-size: 0.75em;
     }
     
     .parameters {
+        top: 8px;
+        right: 8px;
+        padding: 6px 10px;
         flex-direction: column;
-        gap: 10px;
+        gap: 6px;
     }
     
     h1 {
@@ -520,14 +547,18 @@ h1 {
         padding: 15px;
     }
     
-    .parameters {
-        margin-top: 10px;
-        padding: 8px;
+    /* ИСПРАВЛЕНИЕ: Адаптация overlay для landscape */
+    .controls {
+        top: 10px;
+        left: 10px;
+        gap: 5px;
     }
     
-    .controls {
-        margin-top: 10px;
-        gap: 10px;
+    .parameters {
+        top: 10px;
+        right: 10px;
+        padding: 8px;
+        gap: 8px;
     }
     
     .instruction {

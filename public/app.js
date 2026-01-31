@@ -40,6 +40,13 @@ changeBtn.addEventListener('click', () => {
     showHeaderOnReset();
 });
 
+// ИСПРАВЛЕНИЕ: Добавляем stopPropagation для кнопок чтобы предотвратить клик по canvas
+[resetBtn, changeBtn].forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+    });
+});
+
 // Функциональность перетаскивания файлов
 uploadSection.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -240,6 +247,11 @@ function createBrushOverlay() {
     brushOverlay.style.pointerEvents = 'none'; // Не блокирует события мыши
     brushOverlay.style.zIndex = '10';
     
+    // ИСПРАВЛЕНИЕ: Установить CSS размеры для точного совпадения с отображаемым canvas
+    const rect = canvas.getBoundingClientRect();
+    brushOverlay.style.width = rect.width + 'px';
+    brushOverlay.style.height = rect.height + 'px';
+    
     brushCtx = brushOverlay.getContext('2d');
     
     // Вставляем overlay поверх canvas
@@ -247,7 +259,7 @@ function createBrushOverlay() {
     canvas.parentElement.appendChild(brushOverlay);
 }
 
-// НОВОЕ: Обработчик resize для синхронизации brushOverlay
+// ИСПРАВЛЕНИЕ: Обработчик resize для синхронизации brushOverlay
 window.addEventListener('resize', () => {
     if (canvas && brushOverlay) {
         const rect = canvas.getBoundingClientRect();
@@ -256,11 +268,11 @@ window.addEventListener('resize', () => {
         brushOverlay.width = canvas.width;
         brushOverlay.height = canvas.height;
         
-        // Обновить CSS размеры
+        // ИСПРАВЛЕНИЕ: Обновить CSS размеры для точного соответствия отображаемому canvas
         brushOverlay.style.width = rect.width + 'px';
         brushOverlay.style.height = rect.height + 'px';
         
-        // Перерисовать кисть если курсор на canvas
+        // ИСПРАВЛЕНИЕ: Перерисовать кисть если есть сохраненные координаты
         if (currentMouseX !== undefined && currentMouseY !== undefined) {
             drawBrush(currentMouseX, currentMouseY, brushRadius);
         }
@@ -285,10 +297,10 @@ function drawBrush(x, y, radius) {
     brushCtx.arc(x, y, radius, 0, Math.PI * 2);
     brushCtx.fill();
     
-    // НОВОЕ: Яркий центр (+15% opacity)
+    // ИСПРАВЛЕНИЕ: Усиленный яркий центр (+15% визуальной яркости)
     const centerRadius = radius * 0.25; // 25% от основного радиуса
     const centerGradient = brushCtx.createRadialGradient(x, y, 0, x, y, centerRadius);
-    centerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.20)'); // Белый яркий центр
+    centerGradient.addColorStop(0, 'rgba(255, 255, 255, 0.20)'); // Белый яркий центр для +15% opacity
     centerGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.10)');
     centerGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
     
@@ -334,7 +346,7 @@ function setupMouseInteraction() {
     });
     
     canvas.addEventListener('mousedown', (e) => {
-        // Only respond to left mouse button AND clicks inside canvas
+        // ИСПРАВЛЕНИЕ: Только левая кнопка мыши (e.button === 0) И клик внутри видимой области canvas
         if (e.button !== 0) {
             console.log('Mousedown ignored: not left button (button=' + e.button + ')');
             return;
@@ -344,7 +356,7 @@ function setupMouseInteraction() {
         const clickX = e.clientX - rect.left;
         const clickY = e.clientY - rect.top;
         
-        // Check if click is inside canvas bounds
+        // ИСПРАВЛЕНИЕ: Проверка что клик внутри границ canvas (предотвращает сброс при кликах по UI)
         if (clickX < 0 || clickX > rect.width || clickY < 0 || clickY > rect.height) {
             console.log('Mousedown ignored: click outside canvas bounds');
             return;
@@ -433,8 +445,8 @@ function applyDeformation(x, y) {
     if (!texture || !canvas) return;
     
     try {
-        // УБРАТЬ loadContentsOf для сброса при новом клике
-        // Отрицательный strength = вдавливание (pinch effect)
+        // ИСПРАВЛЕНИЕ: НЕ вызывать texture.loadContentsOf(canvas) - это вызывало накопление эффектов
+        // Применяем bulgePinch с отрицательной силой для эффекта вдавливания
         const pinchStrength = -Math.abs(deformationStrength);
         
         canvas.draw(texture)
@@ -497,6 +509,11 @@ window.addEventListener('load', () => {
 // Добавить кнопку сохранения после инициализации canvas
 const saveBtn = document.getElementById('saveBtn');
 if (saveBtn) {
+    // ИСПРАВЛЕНИЕ: Добавляем stopPropagation для предотвращения клика по canvas
+    saveBtn.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+    });
+    
     saveBtn.addEventListener('click', async () => {
         if (!canvas || !isImageLoaded) {
             alert('Сначала загрузите изображение');
