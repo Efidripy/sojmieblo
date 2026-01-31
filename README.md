@@ -62,6 +62,51 @@ npm run dev
 PORT=8080 npm start
 ```
 
+### Автоматическая установка через shell скрипт (для Linux серверов)
+
+Для автоматизированного развертывания на Linux сервере используйте скрипт `deploy_sojmieblo.sh`:
+
+```bash
+# Скачайте и запустите скрипт установки
+wget https://raw.githubusercontent.com/Efidripy/sojmieblo/main/deploy_sojmieblo.sh
+chmod +x deploy_sojmieblo.sh
+sudo ./deploy_sojmieblo.sh
+```
+
+Скрипт автоматически:
+- Клонирует репозиторий в `/var/www/sojmieblo`
+- Установит Node.js 14+
+- Настроит приложение для работы на порту 777
+- Создаст systemd сервис для автозапуска
+- Настроит Nginx как reverse proxy (потребуется ввести доменное имя)
+- Запустит приложение
+
+После установки проверьте статус сервиса:
+```bash
+sudo systemctl status sojmieblo.service
+```
+
+### Установка из release архива
+
+Вы можете скачать готовый архив из раздела [Releases](https://github.com/Efidripy/sojmieblo/releases):
+
+```bash
+# Скачайте последний релиз
+wget https://github.com/Efidripy/sojmieblo/releases/latest/download/sojmieblo-release.tar.gz
+
+# Распакуйте архив
+tar -xzf sojmieblo-release.tar.gz
+cd sojmieblo
+
+# Установите зависимости
+npm install --production
+
+# Запустите приложение
+npm start
+```
+
+Архив содержит все необходимые файлы приложения, готовые к развертыванию.
+
 ## Использование
 
 1. Откройте приложение в браузере
