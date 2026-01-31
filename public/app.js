@@ -10,6 +10,7 @@ let brushRadius = CONFIG.deformation.defaultBrushRadius;
 let deformationStrength = CONFIG.deformation.initialStrength;
 let mouseDownTime = 0;
 let mouseDownTimer = null;
+let hasDeformation = false; // Флаг для отслеживания изменений
 
 // Canvas для визуализации кисти
 let brushOverlay = null;
@@ -285,6 +286,7 @@ function setupMouseInteraction() {
     
     canvas.addEventListener('mousedown', (e) => {
         isMouseDown = true;
+        hasDeformation = true; // Отмечаем что была деформация
         const rect = canvas.getBoundingClientRect();
         mouseX = e.clientX - rect.left;
         mouseY = e.clientY - rect.top;
@@ -314,8 +316,11 @@ function setupMouseInteraction() {
         updateStrengthDisplay();
         resetImage();
         
-        // Показываем диалог сохранения после отпускания мыши
-        showSaveDialog();
+        // Показываем диалог сохранения только если была деформация
+        if (hasDeformation) {
+            showSaveDialog();
+            hasDeformation = false; // Сбрасываем флаг после показа диалога
+        }
     });
     
     canvas.addEventListener('mouseleave', () => {
@@ -428,7 +433,62 @@ if (saveBtn) {
 // Загрузить список работ при старте
 window.addEventListener('load', () => {
     workManager.loadWorks();
+    initializeSaveDialog();
 });
+
+// Инициализация диалога сохранения (вызывается один раз)
+function initializeSaveDialog() {
+    const saveDialog = document.createElement('div');
+    saveDialog.id = 'saveDialog';
+    saveDialog.className = 'modal';
+    saveDialog.style.display = 'none';
+    saveDialog.innerHTML = `
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h2 style="margin-bottom: 20px;">Сохранить результат?</h2>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="saveDialogYes" class="save-btn" style="min-width: 100px;">Да</button>
+                <button id="saveDialogNo" class="reset-btn" style="min-width: 100px;">Нет</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(saveDialog);
+    
+    // Обработчики для кнопок (устанавливаются один раз)
+    document.getElementById('saveDialogYes').addEventListener('click', async () => {
+        closeSaveDialog();
+        try {
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Сохранение...';
+            }
+            
+            await workManager.saveWork(canvas);
+            
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Сохранить';
+            }
+        } catch (error) {
+            const saveBtn = document.getElementById('saveBtn');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '💾 Сохранить';
+            }
+        }
+    });
+    
+    document.getElementById('saveDialogNo').addEventListener('click', () => {
+        closeSaveDialog();
+    });
+    
+    // Закрытие по клику вне диалога
+    saveDialog.addEventListener('click', (e) => {
+        if (e.target === saveDialog) {
+            closeSaveDialog();
+        }
+    });
+}
 
 // Показать диалог сохранения
 function showSaveDialog() {
@@ -436,61 +496,10 @@ function showSaveDialog() {
         return;
     }
     
-    // Создаем диалог если его еще нет
-    let saveDialog = document.getElementById('saveDialog');
-    if (!saveDialog) {
-        saveDialog = document.createElement('div');
-        saveDialog.id = 'saveDialog';
-        saveDialog.className = 'modal';
-        saveDialog.innerHTML = `
-            <div class="modal-content" style="max-width: 400px; text-align: center;">
-                <h2 style="margin-bottom: 20px;">Сохранить результат?</h2>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button id="saveDialogYes" class="save-btn" style="min-width: 100px;">Да</button>
-                    <button id="saveDialogNo" class="reset-btn" style="min-width: 100px;">Нет</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(saveDialog);
-        
-        // Обработчики для кнопок
-        document.getElementById('saveDialogYes').addEventListener('click', async () => {
-            closeSaveDialog();
-            try {
-                const saveBtn = document.getElementById('saveBtn');
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.textContent = 'Сохранение...';
-                }
-                
-                await workManager.saveWork(canvas);
-                
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = '💾 Сохранить';
-                }
-            } catch (error) {
-                const saveBtn = document.getElementById('saveBtn');
-                if (saveBtn) {
-                    saveBtn.disabled = false;
-                    saveBtn.textContent = '💾 Сохранить';
-                }
-            }
-        });
-        
-        document.getElementById('saveDialogNo').addEventListener('click', () => {
-            closeSaveDialog();
-        });
-        
-        // Закрытие по клику вне диалога
-        saveDialog.addEventListener('click', (e) => {
-            if (e.target === saveDialog) {
-                closeSaveDialog();
-            }
-        });
+    const saveDialog = document.getElementById('saveDialog');
+    if (saveDialog) {
+        saveDialog.style.display = 'flex';
     }
-    
-    saveDialog.style.display = 'flex';
 }
 
 // Закрыть диалог сохранения
