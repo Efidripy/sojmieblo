@@ -436,14 +436,15 @@ if (modal) {
             workManager.closeWorkModal();
         }
     };
-    
-    // Закрытие по ESC
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.style.display === 'flex') {
-            workManager.closeWorkModal();
-        }
-    });
 }
+
+// Закрытие по ESC (глобальный обработчик, добавляется один раз)
+document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('workModal');
+    if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+        workManager.closeWorkModal();
+    }
+});
 
 // Скрыть заголовок и subtitle при загрузке изображения
 function hideHeaderOnImageLoad() {
