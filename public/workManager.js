@@ -180,6 +180,7 @@ class WorkManager {
         thumbnail.src = `/api/works/${work.id}/thumbnail`;
         thumbnail.alt = 'Work thumbnail';
         thumbnail.className = 'work-thumbnail';
+        thumbnail.loading = 'lazy';
         thumbnail.onclick = () => this.openWorkModal(work.id);
 
         const info = document.createElement('div');

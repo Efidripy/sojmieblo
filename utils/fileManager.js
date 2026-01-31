@@ -7,6 +7,9 @@ class FileManager {
         this.baseDir = baseDir;
         this.worksDir = path.join(baseDir, 'works');
         this.thumbsDir = path.join(baseDir, 'works', 'thumbs');
+        // In-memory cache for works
+        this.worksCache = null;
+        this.cacheTimestamp = null;
     }
 
     /**
@@ -16,9 +19,9 @@ class FileManager {
         try {
             await fs.mkdir(this.worksDir, { recursive: true });
             await fs.mkdir(this.thumbsDir, { recursive: true });
-            console.log('Директории для работ созданы');
+            console.log('[INFO] Директории для работ созданы');
         } catch (error) {
-            console.error('Ошибка создания директорий:', error);
+            console.error('[ERROR] Ошибка создания директорий:', error);
             throw error;
         }
     }
@@ -60,7 +63,7 @@ class FileManager {
             await fs.writeFile(filePath, buffer);
             return filePath;
         } catch (error) {
-            console.error('Ошибка сохранения файла:', error);
+            console.error('[ERROR] Ошибка сохранения файла:', error);
             throw new Error('Failed to save file');
         }
     }
@@ -96,7 +99,10 @@ class FileManager {
                 }, null, 2))
             ]);
 
-            console.log(`✅ Work saved: ${workId}`);
+            console.log(`[INFO] ✅ Work saved: ${workId}`);
+            
+            // Invalidate cache
+            this.invalidateCache();
 
             return {
                 id: workId,
@@ -122,17 +128,30 @@ class FileManager {
             await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
             return metadataPath;
         } catch (error) {
-            console.error('Ошибка сохранения метаданных:', error);
+            console.error('[ERROR] Ошибка сохранения метаданных:', error);
             throw new Error('Failed to save metadata');
         }
     }
 
     /**
-     * Получить список всех работ
+     * Invalidate cache when data changes
+     */
+    invalidateCache() {
+        this.worksCache = null;
+        this.cacheTimestamp = null;
+    }
+
+    /**
+     * Получить список всех работ (with caching)
      * @returns {Promise<Array>} - Массив работ
      */
     async getWorks() {
         try {
+            // Return cached data if available
+            if (this.worksCache !== null) {
+                return this.worksCache;
+            }
+            
             await this.initialize(); // Убедимся что папка существует
             
             const files = await fs.readdir(this.worksDir);
@@ -148,18 +167,24 @@ class FileManager {
                         const metadata = JSON.parse(content);
                         return metadata;
                     } catch (error) {
-                        console.error(`Ошибка чтения метаданных ${file}:`, error);
+                        console.error(`[ERROR] Ошибка чтения метаданных ${file}:`, error);
                         return null;
                     }
                 })
             );
             
             // Фильтруем null значения и сортируем по дате (новые сверху)
-            return works
+            const filteredWorks = works
                 .filter(w => w !== null)
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            
+            // Cache the results
+            this.worksCache = filteredWorks;
+            this.cacheTimestamp = Date.now();
+            
+            return filteredWorks;
         } catch (error) {
-            console.error('Ошибка получения списка работ:', error);
+            console.error('[ERROR] Ошибка получения списка работ:', error);
             return [];
         }
     }
@@ -184,7 +209,7 @@ class FileManager {
             const content = await fs.readFile(metadataPath, 'utf-8');
             return JSON.parse(content);
         } catch (error) {
-            console.error(`Ошибка чтения метаданных работы ${workId}:`, error);
+            console.error(`[ERROR] Ошибка чтения метаданных работы ${workId}:`, error);
             throw new Error(`Work not found: ${workId}`);
         }
     }
@@ -254,10 +279,14 @@ class FileManager {
             const metadataPath = path.join(this.worksDir, `${workId}.json`);
             await fs.unlink(metadataPath).catch(() => {});
             
-            console.log(`✅ Work deleted: ${workId}`);
+            console.log(`[INFO] ✅ Work deleted: ${workId}`);
+            
+            // Invalidate cache
+            this.invalidateCache();
+            
             return true;
         } catch (error) {
-            console.error(`Ошибка удаления работы ${workId}:`, error);
+            console.error(`[ERROR] Ошибка удаления работы ${workId}:`, error);
             throw new Error(`Failed to delete work: ${error.message}`);
         }
     }
@@ -282,20 +311,20 @@ class FileManager {
                     try {
                         await this.deleteWork(work.id);
                         deletedCount++;
-                        console.log(`🗑️ Auto-deleted old work: ${work.id} (age: ${Math.floor(age / (24 * 60 * 60 * 1000))} days)`);
+                        console.log(`[INFO] 🗑️ Auto-deleted old work: ${work.id} (age: ${Math.floor(age / (24 * 60 * 60 * 1000))} days)`);
                     } catch (error) {
-                        console.error(`Failed to delete work ${work.id}:`, error);
+                        console.error(`[ERROR] Failed to delete work ${work.id}:`, error);
                     }
                 }
             }
             
             if (deletedCount > 0) {
-                console.log(`Автоочистка: удалено ${deletedCount} файлов`);
+                console.log(`[INFO] Автоочистка: удалено ${deletedCount} файлов`);
             }
             
             return deletedCount;
         } catch (error) {
-            console.error('Ошибка автоочистки:', error);
+            console.error('[ERROR] Ошибка автоочистки:', error);
             return 0;
         }
     }
@@ -309,7 +338,7 @@ class FileManager {
         const intervalMs = hours * 60 * 60 * 1000;
         const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
 
-        console.log(`🗑️ Auto-cleanup started: check every ${hours}h, delete works older than ${maxAgeDays} days`);
+        console.log(`[INFO] 🗑️ Auto-cleanup started: check every ${hours}h, delete works older than ${maxAgeDays} days`);
         
         // Первая очистка через 10 секунд после старта
         this.cleanupTimeout = setTimeout(async () => {
@@ -334,7 +363,7 @@ class FileManager {
             clearInterval(this.cleanupInterval);
             this.cleanupInterval = null;
         }
-        console.log('Автоочистка файлов остановлена');
+        console.log('[INFO] Автоочистка файлов остановлена');
     }
 
     /**
