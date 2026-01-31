@@ -443,31 +443,43 @@ update_application() {
         systemctl stop sojmieblo || true
     fi
     
+    # Создаем резервную копию
+    BACKUP_DIR="/tmp/sojmieblo_backup_$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$BACKUP_DIR"
+    cp -r "$BACKEND_DIR/." "$BACKUP_DIR/backend/" 2>/dev/null || log_message "Warning: Backend backup failed"
+    cp -r "$FRONTEND_DIR/." "$BACKUP_DIR/frontend/" 2>/dev/null || log_message "Warning: Frontend backup failed"
+    log_message "Backup created at $BACKUP_DIR"
+    
+    # Клонируем во временную директорию
+    TEMP_CLONE="/tmp/sojmieblo_update_$$"
+    git clone https://github.com/Efidripy/sojmieblo.git "$TEMP_CLONE" || handle_error "Не удалось клонировать репозиторий"
+    
     # Обновляем backend
     if [ -d "$BACKEND_DIR" ]; then
         log_message "Обновление backend..."
-        cd "$BACKEND_DIR"
-        git pull origin main || handle_error "Не удалось обновить backend репозиторий"
+        cp "$TEMP_CLONE/server.js" "$BACKEND_DIR/"
+        cp "$TEMP_CLONE/package.json" "$BACKEND_DIR/"
+        cp "$TEMP_CLONE/package-lock.json" "$BACKEND_DIR/" 2>/dev/null || true
         
         # Проверяем изменения в package.json
-        if git diff --name-only HEAD@{1} HEAD | grep -q "package.json"; then
+        if ! diff -q "$BACKUP_DIR/backend/package.json" "$BACKEND_DIR/package.json" > /dev/null 2>&1; then
             log_message "Обнаружены изменения в package.json, обновление зависимостей..."
-            npm install || handle_error "Не удалось обновить npm пакеты"
+            cd "$BACKEND_DIR"
+            npm install --production || handle_error "Не удалось обновить npm пакеты"
         fi
     fi
     
     # Обновляем frontend
     if [ -d "$FRONTEND_DIR" ]; then
         log_message "Обновление frontend..."
-        cd "$FRONTEND_DIR"
-        git pull origin main || handle_error "Не удалось обновить frontend репозиторий"
-        
-        # Копируем файлы в backend/public если нужно
-        if [ -d "$BACKEND_DIR/public" ]; then
-            log_message "Копирование frontend файлов..."
-            cp -r public/* "$BACKEND_DIR/public/" || true
-        fi
+        cp -r "$TEMP_CLONE/public/." "$FRONTEND_DIR/" || handle_error "Не удалось обновить frontend"
     fi
+    
+    # Удаляем временную директорию
+    rm -rf "$TEMP_CLONE"
+    
+    # Обновляем server.js для использования правильного пути к frontend
+    sed -i "s|path.join(__dirname, 'public')|'$FRONTEND_DIR'|g" "$BACKEND_DIR/server.js" 2>/dev/null || true
     
     # Сохраняем информацию о развертывании с текущим портом
     save_deployment_info
@@ -481,6 +493,7 @@ update_application() {
     if systemctl is-active --quiet sojmieblo; then
         log_message "Обновление завершено успешно!"
         systemctl status sojmieblo --no-pager
+        echo -e "${GREEN}[OK] ${NC}Обновление завершено успешно!"
     else
         handle_error "Сервис не запустился после обновления"
     fi
@@ -633,15 +646,6 @@ log_message "Restarting Nginx and Sojmieblo service..."
 systemctl restart nginx 2>/dev/null || log_message "Warning: Failed to restart Nginx (may not be configured)"
 
 # Create marker file to indicate successful installation
-# Initialize git repository for version tracking
-if [ ! -d "$BACKEND_DIR/.git" ]; then
-    cd "$BACKEND_DIR"
-    git init || log_message "Warning: Could not initialize git repository"
-    git remote add origin https://github.com/Efidripy/sojmieblo.git 2>/dev/null || log_message "Warning: Could not add git remote"
-    git add . || log_message "Warning: Could not add files to git"
-    git commit -m "Initial deployment commit $GIT_COMMIT" 2>/dev/null || log_message "Warning: Could not create git commit"
-fi
-
 save_deployment_info
 
 # Installation Summary
