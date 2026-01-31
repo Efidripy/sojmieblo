@@ -30,7 +30,7 @@ const checkInitialized = (req, res, next) => {
 (async () => {
     try {
         await fileManager.initialize();
-        fileManager.startAutoCleanup(1); // Автоочистка каждый час
+        fileManager.startAutoCleanup(1, 7); // Автоочистка каждый час, удаляем файлы старше 7 дней
         isInitialized = true;
         console.log('FileManager инициализирован');
     } catch (error) {
