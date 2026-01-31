@@ -11,6 +11,10 @@ let deformationStrength = CONFIG.deformation.initialStrength;
 let mouseDownTime = 0;
 let mouseDownTimer = null;
 let hasDeformation = false; // Флаг для отслеживания изменений
+let lastDeformationX = 0;
+let lastDeformationY = 0;
+let lastDeformationRadius = 0;
+let lastDeformationStrength = 0;
 
 // Canvas для визуализации кисти
 let brushOverlay = null;
@@ -247,12 +251,12 @@ function drawBrush(x, y, radius) {
     brushCtx.arc(x, y, radius, 0, Math.PI * 2);
     brushCtx.fill();
     
-    // Добавляем обводку для четкости, также с уменьшенной прозрачностью
-    brushCtx.strokeStyle = 'rgba(0, 0, 0, 0.08)';  // Обводка - 8% (было 40%, теперь 40/5)
-    brushCtx.lineWidth = 2;
-    brushCtx.beginPath();
-    brushCtx.arc(x, y, radius, 0, Math.PI * 2);
-    brushCtx.stroke();
+    // Убираем черную обводку - показываем только градиент размытия
+    // brushCtx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+    // brushCtx.lineWidth = 2;
+    // brushCtx.beginPath();
+    // brushCtx.arc(x, y, radius, 0, Math.PI * 2);
+    // brushCtx.stroke();
 }
 
 // Скрыть кисть
@@ -269,8 +273,11 @@ function setupMouseInteraction() {
     
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
+        // Apply scaling to account for canvas display size vs actual size
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        mouseX = (e.clientX - rect.left) * scaleX;
+        mouseY = (e.clientY - rect.top) * scaleY;
         
         // Отображаем кисть
         drawBrush(mouseX, mouseY, brushRadius);
@@ -288,8 +295,11 @@ function setupMouseInteraction() {
     canvas.addEventListener('mousedown', (e) => {
         isMouseDown = true;
         const rect = canvas.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
+        // Apply scaling to account for canvas display size vs actual size
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        mouseX = (e.clientX - rect.left) * scaleX;
+        mouseY = (e.clientY - rect.top) * scaleY;
         
         mouseDownTime = Date.now();
         
@@ -314,12 +324,15 @@ function setupMouseInteraction() {
         clearInterval(mouseDownTimer);
         deformationStrength = CONFIG.deformation.initialStrength;
         updateStrengthDisplay();
-        resetImage();
         
         // Показываем диалог сохранения только если была деформация
+        // НЕ сбрасываем изображение - оставляем деформацию видимой
         if (hasDeformation) {
             showSaveDialog();
             hasDeformation = false; // Сбрасываем флаг после показа диалога
+        } else {
+            // Если не было деформации, сбрасываем как обычно
+            resetImage();
         }
     });
     
@@ -362,6 +375,12 @@ function applyDeformation(x, y) {
     if (!texture || !canvas) return;
     
     try {
+        // Сохраняем параметры последней деформации
+        lastDeformationX = x;
+        lastDeformationY = y;
+        lastDeformationRadius = brushRadius;
+        lastDeformationStrength = deformationStrength;
+        
         // Используем brushRadius напрямую
         // Центр деформации всегда под курсором (x, y)
         canvas.draw(texture)
@@ -476,16 +495,22 @@ function initializeSaveDialog() {
                 saveBtn.textContent = '💾 Сохранить';
             }
         }
+        // Сбрасываем изображение после сохранения
+        resetImage();
     });
     
     document.getElementById('saveDialogNo').addEventListener('click', () => {
         closeSaveDialog();
+        // Сбрасываем изображение если пользователь отказался сохранять
+        resetImage();
     });
     
     // Закрытие по клику вне диалога
     saveDialog.addEventListener('click', (e) => {
         if (e.target === saveDialog) {
             closeSaveDialog();
+            // Сбрасываем изображение при закрытии диалога
+            resetImage();
         }
     });
 }
@@ -533,6 +558,7 @@ document.addEventListener('keydown', (e) => {
         const saveDialog = document.getElementById('saveDialog');
         if (saveDialog && saveDialog.style.display === 'flex') {
             closeSaveDialog();
+            resetImage(); // Сбрасываем изображение при закрытии ESC
             return;
         }
         
