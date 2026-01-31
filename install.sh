@@ -151,6 +151,8 @@ install_app() {
     if [ -d "$INSTALL_DIR/.git" ]; then
         echo -e "${BLUE}🔄 Updating existing installation...${NC}"
         cd "$INSTALL_DIR"
+        # Reset package.json to avoid merge conflicts from previous version updates
+        git checkout -- package.json 2>/dev/null || true
         git pull origin main
     else
         echo -e "${BLUE}📦 Cloning repository...${NC}"
