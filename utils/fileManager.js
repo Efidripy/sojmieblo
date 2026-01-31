@@ -263,11 +263,11 @@ class FileManager {
     }
 
     /**
-     * Автоочистка файлов старше 24 часов
+     * Автоочистка файлов старше заданного возраста
+     * @param {Number} maxAgeMs - Максимальный возраст в миллисекундах (по умолчанию 24 часа)
      * @returns {Promise<Number>} - Количество удаленных файлов
      */
-    async cleanupOldFiles() {
-        const maxAge = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+    async cleanupOldFiles(maxAgeMs = 24 * 60 * 60 * 1000) {
         let deletedCount = 0;
         
         try {
@@ -278,7 +278,7 @@ class FileManager {
                 const createdAt = new Date(work.createdAt).getTime();
                 const age = now - createdAt;
                 
-                if (age > maxAge) {
+                if (age > maxAgeMs) {
                     try {
                         await this.deleteWork(work.id);
                         deletedCount++;
@@ -313,51 +313,13 @@ class FileManager {
         
         // Первая очистка через 10 секунд после старта
         this.cleanupTimeout = setTimeout(async () => {
-            await this.cleanupOldFilesWithMaxAge(maxAgeMs);
+            await this.cleanupOldFiles(maxAgeMs);
         }, 10000);
         
         // Периодическая очистка
         this.cleanupInterval = setInterval(async () => {
-            await this.cleanupOldFilesWithMaxAge(maxAgeMs);
+            await this.cleanupOldFiles(maxAgeMs);
         }, intervalMs);
-    }
-
-    /**
-     * Автоочистка файлов старше заданного возраста
-     * @param {Number} maxAgeMs - Максимальный возраст в миллисекундах
-     * @returns {Promise<Number>} - Количество удаленных файлов
-     */
-    async cleanupOldFilesWithMaxAge(maxAgeMs) {
-        let deletedCount = 0;
-        
-        try {
-            const works = await this.getWorks();
-            const now = Date.now();
-            
-            for (const work of works) {
-                const createdAt = new Date(work.createdAt).getTime();
-                const age = now - createdAt;
-                
-                if (age > maxAgeMs) {
-                    try {
-                        await this.deleteWork(work.id);
-                        deletedCount++;
-                        console.log(`🗑️ Auto-deleted old work: ${work.id} (age: ${Math.floor(age / (24 * 60 * 60 * 1000))} days)`);
-                    } catch (error) {
-                        console.error(`Failed to delete work ${work.id}:`, error);
-                    }
-                }
-            }
-            
-            if (deletedCount > 0) {
-                console.log(`Автоочистка: удалено ${deletedCount} файлов`);
-            }
-            
-            return deletedCount;
-        } catch (error) {
-            console.error('Auto-cleanup error:', error);
-            return 0;
-        }
     }
 
     /**
