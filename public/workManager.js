@@ -50,6 +50,11 @@ class WorkManager {
     async loadWorks() {
         try {
             const response = await fetch('/api/works');
+            
+            if (!response.ok) {
+                throw new Error('Failed to load works');
+            }
+            
             const data = await response.json();
             this.works = data.works || [];
             
@@ -207,8 +212,19 @@ class WorkManager {
     // Форматировать время
     formatTime(isoString) {
         const date = new Date(isoString);
+        
+        // Проверка на валидность даты
+        if (isNaN(date.getTime())) {
+            return 'Неизвестно';
+        }
+        
         const now = new Date();
         const diff = now - date;
+        
+        // Если дата в будущем
+        if (diff < 0) {
+            return 'Только что';
+        }
         
         // Менее минуты назад
         if (diff < 60000) {
