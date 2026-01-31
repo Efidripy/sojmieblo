@@ -1,0 +1,31 @@
+name: Auto Version Update
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Generate Fun Version
+        run: |
+          MAJOR=1
+          MINOR=$((RANDOM % 10))
+          PATCH=$((RANDOM % 100))
+          CODENAMES=("Squished-Banana" "Melted-Ice-Cream" "Rubber-Face" "Pixel-Pudding" "Elastic-Cheese")
+          CODENAME=${CODENAMES[$RANDOM % ${#CODENAMES[@]}]}
+          VERSION="${MAJOR}.${MINOR}.${PATCH}-${CODENAME}"
+          
+          echo "Generated version: $VERSION"
+          sed -i "s/\"version\": \".*\"/\"version\": \"${VERSION}\"/" package.json
+          
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json
+          git commit -m "🎉 Auto-update version" || echo "No changes"
+          git push

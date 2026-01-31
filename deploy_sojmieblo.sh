@@ -8,6 +8,8 @@
 RED="\033[0;31m"
 GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
+PURPLE="\033[0;35m"
+CYAN="\033[0;36m"
 NC="\033[0m" # No Color
 
 # Define Application and Log Directories
@@ -19,6 +21,34 @@ MARKER_FILE="/opt/sojmieblo/.deployed"
 
 # Create log directory if it doesn't exist
 mkdir -p $LOG_DIR
+
+# Check and install missing dependencies
+check_dependencies() {
+    log_message "Checking system dependencies..."
+    
+    local missing_deps=()
+    
+    # Check for required commands
+    command -v git >/dev/null 2>&1 || missing_deps+=("git")
+    command -v curl >/dev/null 2>&1 || missing_deps+=("curl")
+    command -v node >/dev/null 2>&1 || missing_deps+=("nodejs")
+    
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  Missing dependencies: ${missing_deps[*]}${NC}"
+        echo -e "${CYAN}Installing missing dependencies...${NC}"
+        
+        apt-get update
+        apt-get install -y ${missing_deps[@]}
+    fi
+    
+    # Check Sharp system dependencies
+    if ! dpkg -l | grep -q libvips; then
+        echo -e "${YELLOW}⚠️  Installing Sharp dependencies...${NC}"
+        apt-get install -y build-essential libvips-dev libvips-tools pkg-config python3
+    fi
+    
+    log_message "✅ All dependencies checked"
+}
 
 log_message() {
     echo -e "${GREEN}[INFO] ${NC}$(date) - $1" >> $LOG_DIR/deploy.log
@@ -362,6 +392,25 @@ full_uninstall() {
     exit 0
 }
 
+# Display fun version banner
+display_version_banner() {
+    local version=$(cd "$BACKEND_DIR" 2>/dev/null && node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+    
+    echo -e "${PURPLE}"
+    cat << "EOF"
+   _____       _           _      _     _       
+  / ____|     (_)         (_)    | |   | |      
+ | (___   ___  _  ___  ___ _  ___| |__ | | ___  
+  \___ \ / _ \| |/ _ \/ __| |/ _ \ '_ \| |/ _ \ 
+  ____) | (_) | | (_) \__ \ |  __/ |_) | | (_) |
+ |_____/ \___/| |\___/|___/_|\___|_.__/|_|\___/ 
+             _/ |                                
+            |__/                                 
+EOF
+    echo -e "${NC}"
+    echo -e "${CYAN}Version: ${version}${NC}\n"
+}
+
 # Проверка существующей установки
 check_existing_installation() {
     if [ -f "$MARKER_FILE" ]; then
@@ -560,6 +609,12 @@ if [ "$EUID" -ne 0 ]; then
     echo -e "${RED}[ERROR] ${NC}Пожалуйста, запустите скрипт с правами root или используйте sudo"
     exit 1
 fi
+
+# Display version banner
+display_version_banner
+
+# Check dependencies
+check_dependencies
 
 # Check existing installation
 check_existing_installation
