@@ -383,11 +383,13 @@ Create a `.env` file in the root directory to configure the application:
 ```env
 PORT=3000
 NODE_ENV=development
+MAX_IMAGE_LENGTH=52428800
 ```
 
 Available environment variables:
 - `PORT` - Server port (default: 3000)
 - `NODE_ENV` - Environment mode (development/production)
+- `MAX_IMAGE_LENGTH` - Maximum image size in bytes for base64 uploads (default: 52428800 = 50MB)
 
 ### Running Tests
 
