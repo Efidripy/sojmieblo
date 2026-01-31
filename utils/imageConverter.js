@@ -52,7 +52,7 @@ class ImageConverter {
 
             return outputBuffer;
         } catch (error) {
-            console.error('Ошибка конвертации изображения:', error);
+            console.error('[ERROR] Ошибка конвертации изображения:', error);
             throw new Error(`Failed to convert to JPEG: ${error.message}`);
         }
     }
@@ -84,7 +84,7 @@ class ImageConverter {
 
             return thumbnail;
         } catch (error) {
-            console.error('Ошибка создания миниатюры:', error);
+            console.error('[ERROR] Ошибка создания миниатюры:', error);
             throw new Error(`Failed to create thumbnail: ${error.message}`);
         }
     }
@@ -126,7 +126,7 @@ class ImageConverter {
                 size: inputBuffer.length
             };
         } catch (error) {
-            console.error('Ошибка получения информации об изображении:', error);
+            console.error('[ERROR] Ошибка получения информации об изображении:', error);
             throw new Error(`Failed to get image info: ${error.message}`);
         }
     }
