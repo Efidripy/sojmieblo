@@ -277,6 +277,7 @@ function setupMouseInteraction() {
         
         // Применение эффекта только при нажатии
         if (isMouseDown) {
+            hasDeformation = true; // Отмечаем что произошла деформация
             applyDeformation(mouseX, mouseY);
         } else {
             // Сброс изображения когда не нажато
@@ -286,7 +287,6 @@ function setupMouseInteraction() {
     
     canvas.addEventListener('mousedown', (e) => {
         isMouseDown = true;
-        hasDeformation = true; // Отмечаем что была деформация
         const rect = canvas.getBoundingClientRect();
         mouseX = e.clientX - rect.left;
         mouseY = e.clientY - rect.top;

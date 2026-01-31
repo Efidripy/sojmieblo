@@ -217,9 +217,9 @@ add_to_existing_nginx() {
     read -p "Введите путь location (например / или /sojmieblo): " location_path
     location_path=${location_path:-/}
     
-    # Validate location path
-    if [[ ! "$location_path" =~ ^/[a-zA-Z0-9/_-]*$ ]]; then
-        error_exit "Неверный путь location. Путь должен начинаться с / и содержать только буквы, цифры, -, _ и /"
+    # Validate location path - ensure well-formed path with single slashes
+    if [[ ! "$location_path" =~ ^/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)?$ ]]; then
+        error_exit "Неверный путь location. Путь должен начинаться с / и содержать только буквы, цифры, - и _ между одинарными слэшами"
     fi
     
     # Backup original config
