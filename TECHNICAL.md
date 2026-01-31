@@ -366,17 +366,48 @@ cd sojmieblo
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (with auto-reload)
+npm run dev
+
+# Or start production server
 npm start
 
 # Access application
 # Open http://localhost:3000
 ```
 
+### Environment Variables
+
+Create a `.env` file in the root directory to configure the application:
+
+```env
+PORT=3000
+NODE_ENV=development
+MAX_IMAGE_LENGTH=52428800
+```
+
+Available environment variables:
+- `PORT` - Server port (default: 3000)
+- `NODE_ENV` - Environment mode (development/production)
+- `MAX_IMAGE_LENGTH` - Maximum image size in bytes for base64 uploads (default: 52428800 = 50MB)
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (for development)
+npm test -- --watch
+
+# Run tests with coverage
+npm test -- --coverage
+```
+
 ### Development Tips
 
 1. **Frontend changes**: Just reload browser (no server restart needed)
-2. **Backend changes**: Restart server with `npm start`
+2. **Backend changes**: The `npm run dev` command uses nodemon which automatically restarts the server
 3. **Testing uploads**: Use small images first (<1MB)
 4. **Console debugging**: Open browser DevTools → Console for errors
 
