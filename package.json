@@ -1,6 +1,6 @@
 {
   "name": "sojmieblo",
-  "version": "1.2.17-Rubber-Face",
+  "version": "1.5.24-Rubber-Face",
   "description": "Interactive face deformation web app with real-time WebGL effects",
   "main": "server.js",
   "scripts": {
