@@ -11,7 +11,9 @@ const FileManager = require('./utils/fileManager');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const parsedMaxLength = parseInt(process.env.MAX_IMAGE_LENGTH, 10);
-const MAX_IMAGE_LENGTH = !isNaN(parsedMaxLength) ? parsedMaxLength : (50 * 1024 * 1024); // 50MB default
+const parsedMaxBytes = parseInt(process.env.MAX_IMAGE_BYTES, 10);
+const MAX_IMAGE_LENGTH = !isNaN(parsedMaxLength) ? parsedMaxLength : (50 * 1024 * 1024); // 50MB base64 length default
+const MAX_IMAGE_BYTES = !isNaN(parsedMaxBytes) ? parsedMaxBytes : (30 * 1024 * 1024); // 30MB binary default
 
 // Увеличиваем лимит для загрузки больших изображений
 // Используем 50mb для express.json чтобы покрыть base64 инфляцию (~33% оверхед)
@@ -20,7 +22,9 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Инициализация FileManager
-const fileManager = new FileManager(__dirname);
+const parsedCacheTtl = parseInt(process.env.WORKS_CACHE_TTL_MS, 10);
+const worksCacheTtlMs = !isNaN(parsedCacheTtl) ? parsedCacheTtl : 10 * 1000;
+const fileManager = new FileManager(__dirname, { cacheTtlMs: worksCacheTtlMs });
 let isInitialized = false;
 
 // Middleware для проверки инициализации
@@ -88,6 +92,11 @@ app.post('/api/save-work', async (req, res) => {
         // Конвертируем base64 в buffer
         const imageBuffer = ImageConverter.base64ToBuffer(image);
         
+        // Проверяем размер декодированного буфера (бинарные данные)
+        if (imageBuffer.length > MAX_IMAGE_BYTES) {
+            return res.status(400).json({ error: 'Image file too large' });
+        }
+
         // Получаем информацию об изображении
         const imageInfo = await ImageConverter.getImageInfo(imageBuffer);
         
