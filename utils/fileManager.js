@@ -3,13 +3,14 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 class FileManager {
-    constructor(baseDir) {
+    constructor(baseDir, options = {}) {
         this.baseDir = baseDir;
         this.worksDir = path.join(baseDir, 'works');
         this.thumbsDir = path.join(baseDir, 'works', 'thumbs');
         // In-memory cache for works
         this.worksCache = null;
         this.cacheTimestamp = null;
+        this.cacheTtlMs = options.cacheTtlMs ?? 10 * 1000;
     }
 
     /**
@@ -141,14 +142,22 @@ class FileManager {
         this.cacheTimestamp = null;
     }
 
+    isCacheValid() {
+        if (!this.worksCache || this.cacheTimestamp === null) {
+            return false;
+        }
+        return (Date.now() - this.cacheTimestamp) < this.cacheTtlMs;
+    }
+
     /**
      * Получить список всех работ (with caching)
      * @returns {Promise<Array>} - Массив работ
      */
-    async getWorks() {
+    async getWorks(options = {}) {
+        const { forceRefresh = false } = options;
         try {
             // Return cached data if available
-            if (this.worksCache !== null) {
+            if (!forceRefresh && this.isCacheValid()) {
                 return this.worksCache;
             }
             
@@ -300,7 +309,7 @@ class FileManager {
         let deletedCount = 0;
         
         try {
-            const works = await this.getWorks();
+            const works = await this.getWorks({ forceRefresh: true });
             const now = Date.now();
             
             for (const work of works) {
