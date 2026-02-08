@@ -10,50 +10,60 @@ class WorkManager {
         try {
             // ИСПРАВЛЕНИЕ: Убрать draw(texture).update() перед gl.readPixels() - это перезаписывает визуальное состояние
             // Вместо этого используем gl.finish() для завершения рендеринга и читаем текущие пиксели
-            const gl = canvasElement._.gl;
-            
-            // Завершаем все операции GPU перед чтением пикселей
-            gl.finish();
-            
-            // Read pixels directly from WebGL buffer
-            const width = canvasElement.width;
-            const height = canvasElement.height;
-            const pixels = new Uint8Array(width * height * 4);
-            
-            gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-            
-            // Create temporary canvas to flip Y-axis (WebGL renders upside down)
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // Create ImageData from WebGL pixels
-            const imageData = tempCtx.createImageData(width, height);
-            
-            // Flip Y-axis (WebGL coords are bottom-left, canvas is top-left)
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width; x++) {
-                    const srcIdx = (y * width + x) * 4;
-                    const dstIdx = ((height - y - 1) * width + x) * 4;
-                    imageData.data[dstIdx] = pixels[srcIdx];
-                    imageData.data[dstIdx + 1] = pixels[srcIdx + 1];
-                    imageData.data[dstIdx + 2] = pixels[srcIdx + 2];
-                    imageData.data[dstIdx + 3] = pixels[srcIdx + 3];
+            const width = canvasElement?.width;
+            const height = canvasElement?.height;
+            const gl = canvasElement?._?.gl;
+            let imageDataURL = '';
+
+            if (gl && typeof gl.readPixels === 'function') {
+                // Завершаем все операции GPU перед чтением пикселей
+                gl.finish();
+
+                // Read pixels directly from WebGL buffer
+                if (!width || !height) {
+                    throw new Error('Canvas size is unavailable for export');
                 }
+                const pixels = new Uint8Array(width * height * 4);
+
+                gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+
+                // Create temporary canvas to flip Y-axis (WebGL renders upside down)
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+
+                // Create ImageData from WebGL pixels
+                const imageData = tempCtx.createImageData(width, height);
+
+                // Flip Y-axis (WebGL coords are bottom-left, canvas is top-left)
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const srcIdx = (y * width + x) * 4;
+                        const dstIdx = ((height - y - 1) * width + x) * 4;
+                        imageData.data[dstIdx] = pixels[srcIdx];
+                        imageData.data[dstIdx + 1] = pixels[srcIdx + 1];
+                        imageData.data[dstIdx + 2] = pixels[srcIdx + 2];
+                        imageData.data[dstIdx + 3] = pixels[srcIdx + 3];
+                    }
+                }
+
+                // Put flipped image data to canvas
+                tempCtx.putImageData(imageData, 0, 0);
+
+                // Export as JPEG
+                imageDataURL = tempCanvas.toDataURL('image/jpeg', 0.95);
+            } else if (canvasElement && typeof canvasElement.toDataURL === 'function') {
+                imageDataURL = canvasElement.toDataURL('image/jpeg', 0.95);
+            } else {
+                throw new Error('Canvas context is not available for export');
             }
-            
-            // Put flipped image data to canvas
-            tempCtx.putImageData(imageData, 0, 0);
-            
-            // Export as JPEG
-            const imageDataURL = tempCanvas.toDataURL('image/jpeg', 0.95);
             
             // Verify it's not empty/black (basic check)
             // Minimum size adjusted based on canvas dimensions
             // Using 1% of total pixels as baseline (width * height / 100)
             // This accounts for varying image sizes and JPEG compression
-            const minExpectedSize = Math.max(500, width * height / 100);
+            const minExpectedSize = Math.max(500, (width || 0) * (height || 0) / 100);
             if (imageDataURL.length < minExpectedSize) {
                 throw new Error(`Generated image is too small (likely black): ${imageDataURL.length} bytes, expected at least ${minExpectedSize}`);
             }
