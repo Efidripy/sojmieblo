@@ -8,6 +8,8 @@
              _/ |                                
             |__/                                 
 ```
+![reshe](https://github.com/user-attachments/assets/a3e199e1-590b-428f-b94c-70b69aec279a)
+
 
 ## 🎯 О проекте
 
