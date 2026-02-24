@@ -1,6 +1,6 @@
 {
   "name": "sojmieblo",
-  "version": "1.8.60-Melted-Ice-Cream",
+  "version": "1.0.48-Squished-Banana",
   "description": "Interactive face deformation web app with real-time WebGL effects",
   "main": "server.js",
   "scripts": {
