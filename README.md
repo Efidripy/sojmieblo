@@ -36,6 +36,11 @@ npm start
 
 Приложение будет доступно по адресу: **http://localhost:3000**
 
+Проверка bounded smoke:
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke-home.ps1
+```
+
 ### Развертывание на сервере
 
 **Автоматическая установка:**
