@@ -28,12 +28,51 @@ const uploadBtn = document.getElementById('uploadBtn');
 const resetBtn = document.getElementById('resetBtn');
 const changeBtn = document.getElementById('changeBtn');
 const glCanvas = document.getElementById('glCanvas');
+const debugToggleBtn = document.getElementById('debugToggleBtn');
+
+const DEBUG_STORAGE_KEY = 'sojmieblo_debug_logs_enabled';
+let debugLogsEnabled = localStorage.getItem(DEBUG_STORAGE_KEY) === '1';
+
+function debugEvent(eventName, details = {}) {
+    if (!debugLogsEnabled) return;
+    const payload = {
+        time: new Date().toISOString(),
+        event: eventName,
+        ...details
+    };
+    console.log('[DEBUG]', payload);
+}
+
+window.debugEvent = debugEvent;
+window.setDebugLogsEnabled = (enabled) => {
+    debugLogsEnabled = Boolean(enabled);
+    localStorage.setItem(DEBUG_STORAGE_KEY, debugLogsEnabled ? '1' : '0');
+    if (debugToggleBtn) {
+        debugToggleBtn.textContent = `Logs: ${debugLogsEnabled ? 'ON' : 'OFF'}`;
+        debugToggleBtn.classList.toggle('is-on', debugLogsEnabled);
+    }
+    console.log(`[DEBUG] logging ${debugLogsEnabled ? 'enabled' : 'disabled'}`);
+};
+
+if (debugToggleBtn) {
+    debugToggleBtn.addEventListener('click', () => {
+        window.setDebugLogsEnabled(!debugLogsEnabled);
+    });
+    window.setDebugLogsEnabled(debugLogsEnabled);
+}
 
 // Инициализация обработчиков событий
-uploadBtn.addEventListener('click', () => fileInput.click());
+uploadBtn.addEventListener('click', () => {
+    debugEvent('ui.upload_button_click');
+    fileInput.click();
+});
 fileInput.addEventListener('change', handleFileSelect);
-resetBtn.addEventListener('click', resetImage);
+resetBtn.addEventListener('click', () => {
+    debugEvent('ui.reset_button_click');
+    resetImage();
+});
 changeBtn.addEventListener('click', () => {
+    debugEvent('ui.change_button_click');
     canvasContainer.style.display = 'none';
     uploadSection.style.display = 'block';
     isImageLoaded = false;
@@ -62,6 +101,7 @@ uploadSection.addEventListener('drop', (e) => {
     uploadSection.classList.remove('dragover');
     const files = e.dataTransfer.files;
     if (files.length > 0) {
+        debugEvent('ui.file_drop', { fileName: files[0].name, size: files[0].size, type: files[0].type });
         handleFile(files[0]);
     }
 });
@@ -112,20 +152,24 @@ function handlePaste(e) {
 function handleFileSelect(e) {
     const file = e.target.files[0];
     if (file) {
+        debugEvent('ui.file_select', { fileName: file.name, size: file.size, type: file.type });
         handleFile(file);
     }
 }
 
 // Обработка загрузки файла
 async function handleFile(file) {
+    debugEvent('file.handle_start', { fileName: file.name, size: file.size, type: file.type });
     // Проверка типа файла
     if (!CONFIG.upload.acceptedTypes.includes(file.type)) {
+        debugEvent('file.rejected_type', { type: file.type });
         alert(`Неподдерживаемый тип файла. Поддерживаются: ${CONFIG.upload.acceptedTypes.join(', ')}`);
         return;
     }
     
     // Проверка размера файла
     if (file.size > CONFIG.upload.maxFileSize) {
+        debugEvent('file.rejected_size', { size: file.size, max: CONFIG.upload.maxFileSize });
         const maxSizeMB = CONFIG.upload.maxFileSize / (1024 * 1024);
         alert(`Файл слишком большой. Максимальный размер: ${maxSizeMB}MB`);
         return;
@@ -150,6 +194,7 @@ async function handleFile(file) {
                 
                 // Инициализируем с превью
                 initializeCanvas(previewImage);
+                debugEvent('file.loaded_preview', { width: previewImage.width, height: previewImage.height, scale: imageScale });
                 uploadSection.style.display = 'none';
                 canvasContainer.style.display = 'block';
                 isImageLoaded = true;
@@ -163,16 +208,19 @@ async function handleFile(file) {
                 updateRadiusDisplay();
                 updateStrengthDisplay();
             } catch (error) {
+                debugEvent('file.preview_error', { message: error.message });
                 console.error('Ошибка создания превью:', error);
                 alert('Ошибка обработки изображения.');
             }
         };
         img.onerror = () => {
+            debugEvent('file.image_load_error');
             alert('Ошибка загрузки изображения. Попробуйте другой файл.');
         };
         img.src = e.target.result;
     };
     reader.onerror = () => {
+        debugEvent('file.reader_error');
         alert('Ошибка чтения файла.');
     };
     reader.readAsDataURL(file);
@@ -515,6 +563,7 @@ if (saveBtn) {
     });
     
     saveBtn.addEventListener('click', async () => {
+        debugEvent('ui.save_button_click');
         if (!canvas || !isImageLoaded) {
             alert('Сначала загрузите изображение');
             return;
@@ -522,21 +571,27 @@ if (saveBtn) {
 
         try {
             saveBtn.disabled = true;
-            saveBtn.textContent = 'Сохранение...';
+            saveBtn.textContent = 'Saving...';
+            debugEvent('save.start');
             
             await workManager.saveWork(canvas);
+            debugEvent('save.success');
             
             saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Сохранить';
+            saveBtn.textContent = 'Save';
         } catch (error) {
+            debugEvent('save.error', { message: error.message });
             saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Сохранить';
+            saveBtn.textContent = 'Save';
         }
     });
 }
 
 // Загрузить список работ при старте
 window.addEventListener('load', () => {
+    if (window.location.protocol === 'file:') {
+        alert('Открыто как file://. Для сохранения и галереи запустите сервер: npm start и откройте http://localhost:3000');
+    }
     workManager.loadWorks();
     initializeSaveDialog();
 });
@@ -565,20 +620,20 @@ function initializeSaveDialog() {
             const saveBtn = document.getElementById('saveBtn');
             if (saveBtn) {
                 saveBtn.disabled = true;
-                saveBtn.textContent = 'Сохранение...';
+                saveBtn.textContent = 'Saving...';
             }
             
             await workManager.saveWork(canvas);
             
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.textContent = '💾 Сохранить';
+                saveBtn.textContent = 'Save';
             }
         } catch (error) {
             const saveBtn = document.getElementById('saveBtn');
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.textContent = '💾 Сохранить';
+                saveBtn.textContent = 'Save';
             }
         }
         // Сбрасываем изображение после сохранения
@@ -626,12 +681,16 @@ const modal = document.getElementById('workModal');
 const modalClose = document.getElementById('modalClose');
 
 if (modalClose) {
-    modalClose.onclick = () => workManager.closeWorkModal();
+    modalClose.onclick = () => {
+        debugEvent('ui.modal_close_click');
+        workManager.closeWorkModal();
+    };
 }
 
 if (modal) {
     modal.onclick = (e) => {
         if (e.target === modal) {
+            debugEvent('ui.modal_backdrop_click');
             workManager.closeWorkModal();
         }
     };

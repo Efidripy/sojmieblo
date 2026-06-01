@@ -10,6 +10,7 @@ const FileManager = require('./utils/fileManager');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ENABLE_RATE_LIMIT = process.env.ENABLE_RATE_LIMIT !== 'false';
 const parsedMaxLength = parseInt(process.env.MAX_IMAGE_LENGTH, 10);
 const parsedMaxBytes = parseInt(process.env.MAX_IMAGE_BYTES, 10);
 const MAX_IMAGE_LENGTH = !isNaN(parsedMaxLength) ? parsedMaxLength : (50 * 1024 * 1024); // 50MB base64 length default
@@ -55,7 +56,12 @@ const limiter = rateLimit({
     message: 'Слишком много запросов с вашего IP-адреса. Пожалуйста, попробуйте позже.'
 });
 
-app.use(limiter);
+if (ENABLE_RATE_LIMIT) {
+    app.use(limiter);
+    console.log('[INFO] Rate limit is ENABLED');
+} else {
+    console.log('[INFO] Rate limit is DISABLED');
+}
 
 // Проверка инициализации для API эндпоинтов
 app.use(checkInitialized);
