@@ -1,0 +1,198 @@
+/* Modern Theme - Google-style */
+body {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%) !important;
+    color: #2c3e50 !important;
+}
+
+h1 {
+    color: #1a73e8 !important;
+    font-size: 2.5em !important;
+}
+
+.subtitle {
+    color: #5f6368 !important;
+}
+
+.debug-toggle {
+    background: white !important;
+    color: #1a73e8 !important;
+    border: 2px solid #1a73e8 !important;
+    font-weight: 700 !important;
+}
+
+.debug-toggle:hover {
+    background: #f0f8ff !important;
+}
+
+.upload-section {
+    background: white !important;
+    border: 2px solid #1a73e8 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px rgba(26, 115, 232, 0.15) !important;
+}
+
+.upload-section:hover {
+    border-color: #0d47a1 !important;
+    box-shadow: 0 12px 48px rgba(26, 115, 232, 0.25) !important;
+}
+
+.upload-btn {
+    background: #1a73e8 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    padding: 12px 32px !important;
+}
+
+.upload-btn:hover {
+    background: #0d47a1 !important;
+    box-shadow: 0 4px 16px rgba(26, 115, 232, 0.3) !important;
+}
+
+.hint {
+    color: #5f6368 !important;
+}
+
+.canvas-container {
+    background: white !important;
+    border: 1px solid #dadce0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+#glCanvas {
+    border-radius: 8px !important;
+}
+
+.parameters {
+    background: white !important;
+    border: 1px solid #dadce0 !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+}
+
+.parameter-label {
+    color: #5f6368 !important;
+}
+
+.parameter-value {
+    color: #1a73e8 !important;
+    font-weight: 700 !important;
+}
+
+.instruction {
+    color: #5f6368 !important;
+}
+
+.reset-btn, .change-btn {
+    background: white !important;
+    color: #1a73e8 !important;
+    border: 2px solid #1a73e8 !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+}
+
+.reset-btn:hover, .change-btn:hover {
+    background: #f0f8ff !important;
+}
+
+.save-btn {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 16px rgba(26, 115, 232, 0.3) !important;
+}
+
+.save-btn:hover {
+    box-shadow: 0 6px 24px rgba(26, 115, 232, 0.4) !important;
+}
+
+.works-sidebar {
+    background: white !important;
+    border-left: 1px solid #dadce0 !important;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+.works-sidebar h3 {
+    color: #1a73e8 !important;
+}
+
+.work-item {
+    background: #f8f9fa !important;
+    border: 1px solid #dadce0 !important;
+    border-radius: 12px !important;
+}
+
+.work-item:hover {
+    border-color: #1a73e8 !important;
+    box-shadow: 0 4px 16px rgba(26, 115, 232, 0.15) !important;
+}
+
+.work-time {
+    color: #5f6368 !important;
+}
+
+.work-btn {
+    background: white !important;
+    border: 1px solid #dadce0 !important;
+    color: #1a73e8 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+.work-btn:hover {
+    background: #f0f8ff !important;
+}
+
+.modal {
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.modal-content {
+    background: white !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+    border-radius: 16px !important;
+}
+
+.modal-close {
+    color: #2c3e50 !important;
+}
+
+.modal-download {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+}
+
+.modal-download:hover {
+    box-shadow: 0 4px 16px rgba(26, 115, 232, 0.3) !important;
+}
+
+.theme-switcher {
+    background: white !important;
+    border: 1px solid #dadce0 !important;
+    border-radius: 20px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.theme-switcher label {
+    color: #2c3e50 !important;
+    font-weight: 600 !important;
+}
+
+.theme-switcher select {
+    background: white !important;
+    color: #1a73e8 !important;
+    border: 2px solid #1a73e8 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+.theme-switcher select:hover {
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.15) !important;
+}

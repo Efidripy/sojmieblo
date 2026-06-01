@@ -1,0 +1,187 @@
+/* Dark Mode Theme */
+body {
+    background: #0f0f0f !important;
+    color: #e0e0e0 !important;
+}
+
+h1 {
+    color: #4a9eff !important;
+}
+
+.subtitle {
+    color: #b0b0b0 !important;
+}
+
+.debug-toggle {
+    background: #1a1a1a !important;
+    color: #e0e0e0 !important;
+    border: 2px solid #333333 !important;
+}
+
+.debug-toggle:hover {
+    background: #252525 !important;
+    border-color: #444444 !important;
+}
+
+.upload-section {
+    background: #1a1a1a !important;
+    border: 2px solid #333333 !important;
+    border-radius: 12px !important;
+}
+
+.upload-section:hover {
+    background: #252525 !important;
+    border-color: #4a9eff !important;
+}
+
+.upload-btn {
+    background: #4a9eff !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+.upload-btn:hover {
+    background: #3a8eef !important;
+}
+
+.hint {
+    color: #a0a0a0 !important;
+}
+
+.canvas-container {
+    background: #1a1a1a !important;
+    border: 1px solid #333333 !important;
+    border-radius: 12px !important;
+}
+
+#glCanvas {
+    border-radius: 8px !important;
+}
+
+.parameters {
+    background: #252525 !important;
+    border: 1px solid #444444 !important;
+    border-radius: 8px !important;
+}
+
+.parameter-label {
+    color: #a0a0a0 !important;
+}
+
+.parameter-value {
+    color: #4a9eff !important;
+    font-weight: 600 !important;
+}
+
+.instruction {
+    color: #a0a0a0 !important;
+}
+
+.reset-btn, .change-btn {
+    background: transparent !important;
+    color: #4a9eff !important;
+    border: 1px solid #4a9eff !important;
+    border-radius: 8px !important;
+}
+
+.reset-btn:hover, .change-btn:hover {
+    background: rgba(74, 158, 255, 0.1) !important;
+}
+
+.save-btn {
+    background: #4a9eff !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+.save-btn:hover {
+    background: #3a8eef !important;
+}
+
+.works-sidebar {
+    background: #1a1a1a !important;
+    border-left: 1px solid #333333 !important;
+}
+
+.works-sidebar h3 {
+    color: #4a9eff !important;
+}
+
+.work-item {
+    background: #252525 !important;
+    border: 1px solid #333333 !important;
+    border-radius: 8px !important;
+}
+
+.work-item:hover {
+    border-color: #4a9eff !important;
+    background: #2a2a2a !important;
+}
+
+.work-time {
+    color: #909090 !important;
+}
+
+.work-btn {
+    background: transparent !important;
+    border: 1px solid #444444 !important;
+    color: #4a9eff !important;
+    border-radius: 6px !important;
+}
+
+.work-btn:hover {
+    background: #1a1a1a !important;
+    border-color: #4a9eff !important;
+}
+
+.modal {
+    background: rgba(0, 0, 0, 0.8) !important;
+}
+
+.modal-content {
+    background: #1a1a1a !important;
+    border: 1px solid #333333 !important;
+    border-radius: 12px !important;
+}
+
+.modal-close {
+    color: #e0e0e0 !important;
+}
+
+.modal-download {
+    background: #4a9eff !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+.modal-download:hover {
+    background: #3a8eef !important;
+}
+
+.theme-switcher {
+    background: #1a1a1a !important;
+    border: 1px solid #333333 !important;
+    border-radius: 20px !important;
+}
+
+.theme-switcher label {
+    color: #e0e0e0 !important;
+    font-weight: 600 !important;
+}
+
+.theme-switcher select {
+    background: #252525 !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #444444 !important;
+    border-radius: 6px !important;
+}
+
+.theme-switcher select:hover {
+    border-color: #4a9eff !important;
+}
