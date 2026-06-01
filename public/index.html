@@ -1,60 +1,60 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sojmieblo - Деформация лица</title>
+    <title>Sojmieblo</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Правая панель с работами -->
     <div id="worksSidebar" class="works-sidebar" style="display: none;">
-        <h3>Сохраненные работы</h3>
+        <div class="works-sidebar-header">
+            <h3>Saved Works</h3>
+            <button id="sidebarToggleBtn" class="sidebar-toggle-btn" type="button" title="Collapse">></button>
+        </div>
         <div id="worksList" class="works-list"></div>
     </div>
 
-    <!-- Основной контейнер -->
     <div class="container">
         <h1>Sojmieblo</h1>
-        <p class="subtitle">Превратите селфи в мем за секунду!</p>
-        
+        <p class="subtitle">Turn a selfie into a meme in seconds.</p>
+
+        <button class="debug-toggle" id="debugToggleBtn" type="button">Logs: OFF</button>
         <div class="upload-section" id="uploadSection">
             <input type="file" id="fileInput" accept="image/*" style="display: none;">
-            <button class="upload-btn" id="uploadBtn">Загрузить фото</button>
-            <p class="hint">Или перетащите изображение сюда</p>
-            <p class="hint">Ctrl+V — вставить из буфера обмена</p>
+            <button class="upload-btn" id="uploadBtn">Upload Photo</button>
+            <p class="hint">Or drag and drop an image here</p>
+            <p class="hint">Ctrl+V to paste from clipboard</p>
         </div>
 
         <div class="canvas-container" id="canvasContainer" style="display: none;">
             <canvas id="glCanvas"></canvas>
-            
-            <!-- Информация о параметрах -->
+
             <div class="parameters">
                 <div class="parameter">
-                    <span class="parameter-label">Ширина кисти (колесико мыши)</span>
+                    <span class="parameter-label">Brush Size (mouse wheel)</span>
                     <span class="parameter-value" id="radiusValue">100</span>
                 </div>
                 <div class="parameter">
-                    <span class="parameter-label">Сила нажатия (удержание)</span>
+                    <span class="parameter-label">Strength (hold click)</span>
                     <span class="parameter-value" id="strengthValue">0.50</span>
                 </div>
             </div>
-            
+
             <div class="controls">
-                <button class="reset-btn" id="resetBtn">Сбросить</button>
-                <button class="save-btn" id="saveBtn">💾 Сохранить</button>
-                <button class="change-btn" id="changeBtn">Новое фото</button>
+                <button class="reset-btn" id="resetBtn">Reset</button>
+                <button class="save-btn" id="saveBtn">Save</button>
+                <button class="change-btn" id="changeBtn">New Photo</button>
             </div>
-            <p class="instruction">Наведите и удерживайте мышь для деформации. Колесико мыши — изменить ширину кисти.</p>
+            <p class="instruction">Hover and hold mouse to deform. Use mouse wheel to change brush size.</p>
         </div>
     </div>
 
-    <!-- Модальное окно для просмотра работы -->
     <div id="workModal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="modalClose">&times;</span>
             <img id="modalImage" src="" alt="Work">
-            <button class="modal-download" id="modalDownload">⬇️ Скачать</button>
+            <button class="modal-download" id="modalDownload">Download</button>
         </div>
     </div>
 
