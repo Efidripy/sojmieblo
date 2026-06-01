@@ -1,6 +1,6 @@
 {
   "name": "sojmieblo",
-  "version": "1.9.9-Pixel-Pudding",
+  "version": "1.5.87-Elastic-Cheese",
   "description": "Interactive face deformation web app with real-time WebGL effects",
   "main": "server.js",
   "scripts": {
