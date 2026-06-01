@@ -20,6 +20,49 @@ body {
     text-align: center;
 }
 
+/* Theme Switcher */
+.theme-switcher {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 200;
+}
+
+.theme-switcher label {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.theme-switcher select {
+    padding: 6px 12px;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.theme-switcher select:hover {
+    border-color: #999;
+    background: white;
+}
+
+.theme-switcher select:focus {
+    outline: none;
+    border-color: #1a1a1a;
+}
+
 h1 {
     color: #1a1a1a; /* 10% черного */
     font-size: clamp(2em, 5vw, 3em);

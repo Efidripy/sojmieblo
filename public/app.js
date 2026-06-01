@@ -255,13 +255,19 @@ function initializeCanvas(img) {
         const scaleY = maxHeight / img.height;
         const scale = Math.min(scaleX, scaleY, 1); // Don't upscale small images
         
-        // Set canvas size (scaled to fit viewport)
-        canvas.width = Math.floor(img.width * scale);
-        canvas.height = Math.floor(img.height * scale);
-        
-        // Also set CSS size to match canvas size for proper display
-        canvas.style.width = canvas.width + 'px';
-        canvas.style.height = canvas.height + 'px';
+        // Keep exact aspect ratio from source image.
+        const aspect = img.width / img.height;
+        const targetWidth = Math.max(1, Math.round(img.width * scale));
+        const targetHeight = Math.max(1, Math.round(targetWidth / aspect));
+
+        // Set render buffer size.
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        // Set display size from one dimension + aspect ratio to avoid distortion.
+        canvas.style.width = `${targetWidth}px`;
+        canvas.style.height = 'auto';
+        canvas.style.aspectRatio = `${img.width} / ${img.height}`;
         
         console.log(`Canvas initialized: ${canvas.width}x${canvas.height} (scale: ${scale.toFixed(2)})`);
         
@@ -495,11 +501,39 @@ function applyDeformation(x, y) {
     try {
         // ИСПРАВЛЕНИЕ: НЕ вызывать texture.loadContentsOf(canvas) - это вызывало накопление эффектов
         // Применяем bulgePinch с отрицательной силой для эффекта вдавливания
-        const pinchStrength = -Math.abs(deformationStrength);
-        
-        canvas.draw(texture)
-            .bulgePinch(x, y, brushRadius, pinchStrength)
-            .update();
+        const pressure = Math.abs(deformationStrength);
+        // Anti-star profile:
+        // keep center compression capped, shift stronger deformation to inner ring.
+        const centerPress = -Math.min(0.34, 0.16 + pressure * 0.14);
+        const innerRingPress = -Math.min(0.42, 0.2 + pressure * 0.2);
+        const outerRingPress = -Math.min(0.24, 0.1 + pressure * 0.12);
+        const outerSoften = Math.min(0.1, 0.04 + pressure * 0.04);
+
+        const innerRingDistance = brushRadius * 0.34;
+        const innerRingRadius = brushRadius * 0.46;
+        const outerRingDistance = brushRadius * 0.58;
+        const outerRingRadius = brushRadius * 0.42;
+
+        let chain = canvas.draw(texture)
+            .bulgePinch(x, y, brushRadius * 0.7, centerPress)
+            .bulgePinch(x, y, brushRadius * 1.28, outerSoften);
+
+        // Distributed pressure ring: bends edges inward instead of collapsing center.
+        for (let i = 0; i < 4; i++) {
+            const a = (Math.PI * 2 * i) / 4;
+            const pxInner = x + Math.cos(a) * innerRingDistance;
+            const pyInner = y + Math.sin(a) * innerRingDistance;
+            chain = chain.bulgePinch(pxInner, pyInner, innerRingRadius, innerRingPress);
+        }
+
+        for (let i = 0; i < 4; i++) {
+            const a = (Math.PI * 2 * i) / 4 + Math.PI / 4;
+            const pxOuter = x + Math.cos(a) * outerRingDistance;
+            const pyOuter = y + Math.sin(a) * outerRingDistance;
+            chain = chain.bulgePinch(pxOuter, pyOuter, outerRingRadius, outerRingPress);
+        }
+
+        chain.update();
             
         hasDeformation = true;
     } catch (e) {
@@ -728,7 +762,31 @@ function hideHeaderOnImageLoad() {
 function showHeaderOnReset() {
     const header = document.querySelector('h1');
     const subtitle = document.querySelector('.subtitle');
-    
+
     if (header) header.style.display = 'block';
     if (subtitle) subtitle.style.display = 'block';
+}
+
+// Theme Switcher
+const themeSelect = document.getElementById('themeSelect');
+if (themeSelect) {
+    const savedTheme = localStorage.getItem('sojmieblo-theme') || 'classic';
+    themeSelect.value = savedTheme;
+    applyTheme(savedTheme);
+    themeSelect.addEventListener('change', (e) => {
+        applyTheme(e.target.value);
+        localStorage.setItem('sojmieblo-theme', e.target.value);
+    });
+}
+
+function applyTheme(theme) {
+    const existingLink = document.getElementById('theme-link');
+    if (existingLink) existingLink.remove();
+    if (theme !== 'classic') {
+        const link = document.createElement('link');
+        link.id = 'theme-link';
+        link.rel = 'stylesheet';
+        link.href = `theme-${theme}.css`;
+        document.head.appendChild(link);
+    }
 }

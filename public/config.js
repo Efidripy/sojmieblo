@@ -15,19 +15,19 @@ const CONFIG = {
         brushRadiusStep: 10,
         
         // Начальная сила деформации (отрицательная для сжатия)
-        initialStrength: -0.5,
+        initialStrength: -0.78,
         
         // Минимальная сила деформации
-        minStrength: -1.5,
+        minStrength: -1.0,
         
         // Максимальная сила деформации
         maxStrength: 0,
         
         // Скорость нарастания силы при удержании (единиц силы в секунду)
-        strengthIncreaseRate: 0.5,
+        strengthIncreaseRate: 0.75,
         
         // Интервал обновления деформации при удержании (мс)
-        updateInterval: 50
+        updateInterval: 70
     },
     
     // Параметры превью изображений

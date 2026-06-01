@@ -1,0 +1,251 @@
+/* Neon Glow Theme - Cyberpunk (Remnawave style) */
+body {
+    background: linear-gradient(135deg, #0a0e27 0%, #0d1b3d 100%) !important;
+    color: #00ffff !important;
+}
+
+h1 {
+    color: #00ffff !important;
+    text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #ff006e !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+}
+
+.subtitle {
+    color: #00ffff !important;
+    text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff !important;
+}
+
+.debug-toggle {
+    background: transparent !important;
+    color: #00ffff !important;
+    border: 2px solid #00ffff !important;
+    box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff !important;
+    transition: all 0.3s ease !important;
+}
+
+.debug-toggle:hover {
+    background: rgba(0, 255, 255, 0.15) !important;
+    box-shadow: 0 0 25px #00ffff, 0 0 50px #00ffff !important;
+}
+
+.upload-section {
+    background: rgba(10, 14, 39, 0.6) !important;
+    border: 2px solid #ff006e !important;
+    border-radius: 16px !important;
+    box-shadow: 0 0 20px #ff006e, 0 0 40px #ff006e, inset 0 0 20px rgba(255, 0, 110, 0.2) !important;
+    backdrop-filter: blur(10px) !important;
+    transition: all 0.3s ease !important;
+}
+
+.upload-section:hover {
+    border-color: #00ffff !important;
+    box-shadow: 0 0 30px #ff006e, 0 0 60px #ff006e, 0 0 40px #00ffff !important;
+}
+
+.upload-btn {
+    background: linear-gradient(135deg, transparent, rgba(255, 0, 110, 0.2)) !important;
+    color: #ff006e !important;
+    border: 2px solid #ff006e !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 15px #ff006e, 0 0 30px #ff006e !important;
+    transition: all 0.3s ease !important;
+}
+
+.upload-btn:hover {
+    background: rgba(255, 0, 110, 0.2) !important;
+    box-shadow: 0 0 25px #ff006e, 0 0 50px #ff006e, 0 0 20px #ff00ff !important;
+    color: #ff00ff !important;
+}
+
+.hint {
+    color: #00ffff !important;
+    text-shadow: 0 0 10px #00ffff !important;
+}
+
+.canvas-container {
+    background: rgba(10, 14, 39, 0.7) !important;
+    border: 2px solid #00ffff !important;
+    border-radius: 16px !important;
+    box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff, inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+#glCanvas {
+    border: 2px solid #ff006e !important;
+    border-radius: 8px !important;
+    box-shadow: 0 0 15px #ff006e !important;
+}
+
+.parameters {
+    background: rgba(10, 14, 39, 0.7) !important;
+    border: 2px solid #00ffff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff, inset 0 0 15px rgba(0, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.parameter-label {
+    color: #00ffff !important;
+    text-shadow: 0 0 8px #00ffff !important;
+}
+
+.parameter-value {
+    color: #ff006e !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 10px #ff006e !important;
+}
+
+.instruction {
+    color: #00ffff !important;
+    text-shadow: 0 0 10px #00ffff !important;
+}
+
+.reset-btn, .change-btn {
+    background: transparent !important;
+    color: #00ffff !important;
+    border: 2px solid #00ffff !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 12px #00ffff, 0 0 25px #00ffff !important;
+    transition: all 0.3s ease !important;
+}
+
+.reset-btn:hover, .change-btn:hover {
+    background: rgba(0, 255, 255, 0.15) !important;
+    box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff !important;
+}
+
+.save-btn {
+    background: linear-gradient(135deg, transparent, rgba(255, 0, 110, 0.3)) !important;
+    color: #ff006e !important;
+    border: 2px solid #ff006e !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 20px #ff006e, 0 0 40px #ff006e !important;
+    transition: all 0.3s ease !important;
+}
+
+.save-btn:hover {
+    background: rgba(255, 0, 110, 0.3) !important;
+    box-shadow: 0 0 30px #ff006e, 0 0 60px #ff006e, 0 0 30px #ff00ff !important;
+    color: #ff00ff !important;
+}
+
+.works-sidebar {
+    background: rgba(10, 14, 39, 0.8) !important;
+    border-left: 2px solid #00ffff !important;
+    box-shadow: inset -2px 0 20px #00ffff !important;
+}
+
+.works-sidebar h3 {
+    color: #ff006e !important;
+    text-shadow: 0 0 15px #ff006e !important;
+}
+
+.work-item {
+    background: rgba(10, 14, 39, 0.8) !important;
+    border: 1px solid #00ffff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.work-item:hover {
+    border-color: #ff006e !important;
+    box-shadow: 0 0 20px #ff006e, 0 0 30px #ff006e, 0 0 15px #00ffff !important;
+}
+
+.work-time {
+    color: #00ffff !important;
+}
+
+.work-btn {
+    background: transparent !important;
+    border: 1px solid #00ffff !important;
+    color: #00ffff !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 8px #00ffff !important;
+}
+
+.work-btn:hover {
+    background: rgba(0, 255, 255, 0.1) !important;
+    box-shadow: 0 0 15px #00ffff !important;
+}
+
+.modal {
+    background: rgba(0, 0, 0, 0.95) !important;
+    backdrop-filter: blur(5px) !important;
+}
+
+.modal-content {
+    background: rgba(10, 14, 39, 0.95) !important;
+    box-shadow: 0 0 40px #ff006e, 0 0 60px #00ffff !important;
+    border: 2px solid #ff006e !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.modal-close {
+    color: #00ffff !important;
+    text-shadow: 0 0 10px #00ffff !important;
+}
+
+.modal-download {
+    background: linear-gradient(135deg, transparent, rgba(255, 0, 110, 0.3)) !important;
+    color: #ff006e !important;
+    border: 2px solid #ff006e !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 0 15px #ff006e !important;
+}
+
+.modal-download:hover {
+    background: rgba(255, 0, 110, 0.3) !important;
+    box-shadow: 0 0 25px #ff006e, 0 0 40px #ff006e, 0 0 20px #00ffff !important;
+}
+
+.theme-switcher {
+    background: rgba(10, 14, 39, 0.8) !important;
+    border: 2px solid #00ffff !important;
+    border-radius: 20px !important;
+    box-shadow: 0 0 20px #00ffff, inset 0 0 10px rgba(0, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.theme-switcher label {
+    color: #ff006e !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 10px #ff006e !important;
+}
+
+.theme-switcher select {
+    background: transparent !important;
+    color: #00ffff !important;
+    border: 2px solid #00ffff !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 10px #00ffff !important;
+}
+
+.theme-switcher select:hover {
+    box-shadow: 0 0 20px #00ffff !important;
+}
+
+.sidebar-toggle-btn {
+    background: transparent !important;
+    color: #ff006e !important;
+    border: 1px solid #ff006e !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    cursor: pointer !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 8px #ff006e !important;
+}
+
+.sidebar-toggle-btn:hover {
+    background: rgba(255, 0, 110, 0.1) !important;
+    box-shadow: 0 0 15px #ff006e !important;
+}
