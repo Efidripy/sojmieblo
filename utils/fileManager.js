@@ -247,14 +247,20 @@ class FileManager {
      * @returns {Object} - Метаданные работы
      */
     async getWork(workId) {
-        const metadataPath = this.getMetadataPath(workId);
-        
+        const safeWorkId = this.validateWorkId(workId);
+
         try {
-            const content = await fs.readFile(metadataPath, 'utf-8');
-            return JSON.parse(content);
+            const works = await this.getWorks();
+            const work = works.find((candidate) => candidate && candidate.id === safeWorkId);
+
+            if (!work) {
+                throw new Error('Work not found');
+            }
+
+            return work;
         } catch (error) {
-            console.error(`[ERROR] Ошибка чтения метаданных работы ${workId}:`, error);
-            throw new Error(`Work not found: ${workId}`);
+            console.error('[ERROR] Ошибка чтения метаданных работы %s:', safeWorkId, error);
+            throw new Error('Work not found');
         }
     }
 
@@ -324,15 +330,15 @@ class FileManager {
             const metadataPath = this.getMetadataPath(safeWorkId);
             await fs.unlink(metadataPath).catch(() => {});
             
-            console.log(`[INFO] ✅ Work deleted: ${safeWorkId}`);
+            console.log('[INFO] ✅ Work deleted: %s', safeWorkId);
             
             // Invalidate cache
             this.invalidateCache();
             
             return true;
         } catch (error) {
-            console.error(`[ERROR] Ошибка удаления работы ${workId}:`, error);
-            throw new Error(`Failed to delete work: ${error.message}`);
+            console.error('[ERROR] Ошибка удаления работы %s:', workId, error);
+            throw new Error('Failed to delete work');
         }
     }
 
