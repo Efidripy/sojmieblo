@@ -327,8 +327,11 @@ class FileManager {
             await fs.unlink(thumbPath).catch(() => {});
             
             // Удаляем метаданные
-            const metadataPath = this.getMetadataPath(safeWorkId);
-            await fs.unlink(metadataPath).catch(() => {});
+            const files = await fs.readdir(this.worksDir);
+            const metadataFile = files.find((file) => file === `${work.id}.json`);
+            if (metadataFile) {
+                await fs.unlink(path.join(this.worksDir, metadataFile)).catch(() => {});
+            }
             
             console.log('[INFO] ✅ Work deleted: %s', safeWorkId);
             
