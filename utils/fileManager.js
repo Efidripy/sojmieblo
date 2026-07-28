@@ -2,6 +2,9 @@ const fs = require('fs').promises;
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
+const WORK_ID_PATTERN = /^\d{8}-\d{6}-[a-f0-9]{10}$/i;
+const FILE_NAME_PATTERN = /^\d{8}-\d{6}-[a-f0-9]{10}\.jpg$/i;
+
 class FileManager {
     constructor(baseDir, options = {}) {
         this.baseDir = baseDir;
@@ -58,7 +61,7 @@ class FileManager {
      */
     async saveFile(fileName, buffer, isThumbnail = false) {
         const targetDir = isThumbnail ? this.thumbsDir : this.worksDir;
-        const filePath = path.join(targetDir, fileName);
+        const filePath = this.resolveStoragePath(targetDir, this.validateFileName(fileName));
         
         try {
             await fs.writeFile(filePath, buffer);
@@ -82,9 +85,9 @@ class FileManager {
             const workId = path.parse(fileName).name;
             
             // Пути к файлам
-            const imagePath = path.join(this.worksDir, fileName);
-            const thumbnailPath = path.join(this.thumbsDir, fileName);
-            const metaPath = path.join(this.worksDir, `${workId}.json`);
+            const imagePath = this.getFilePath(fileName);
+            const thumbnailPath = this.getFilePath(fileName, true);
+            const metaPath = this.getMetadataPath(workId);
 
             // Сохраняем файлы параллельно
             await Promise.all([
@@ -123,7 +126,7 @@ class FileManager {
      * @returns {Promise<String>} - Путь к файлу метаданных
      */
     async saveMetadata(workId, metadata) {
-        const metadataPath = path.join(this.worksDir, `${workId}.json`);
+        const metadataPath = this.getMetadataPath(workId);
         
         try {
             await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
@@ -147,6 +150,38 @@ class FileManager {
             return false;
         }
         return (Date.now() - this.cacheTimestamp) < this.cacheTtlMs;
+    }
+
+    validateWorkId(workId) {
+        if (typeof workId !== 'string' || !WORK_ID_PATTERN.test(workId)) {
+            throw new Error('Invalid work ID');
+        }
+
+        return workId;
+    }
+
+    validateFileName(fileName) {
+        if (typeof fileName !== 'string' || !FILE_NAME_PATTERN.test(fileName)) {
+            throw new Error('Invalid file name');
+        }
+
+        return fileName;
+    }
+
+    resolveStoragePath(directory, fileName) {
+        const root = path.resolve(directory);
+        const resolvedPath = path.resolve(root, fileName);
+
+        if (resolvedPath !== root && !resolvedPath.startsWith(`${root}${path.sep}`)) {
+            throw new Error('Invalid storage path');
+        }
+
+        return resolvedPath;
+    }
+
+    getMetadataPath(workId) {
+        const safeWorkId = this.validateWorkId(workId);
+        return this.resolveStoragePath(this.worksDir, `${safeWorkId}.json`);
     }
 
     /**
@@ -212,7 +247,7 @@ class FileManager {
      * @returns {Object} - Метаданные работы
      */
     async getWork(workId) {
-        const metadataPath = path.join(this.worksDir, `${workId}.json`);
+        const metadataPath = this.getMetadataPath(workId);
         
         try {
             const content = await fs.readFile(metadataPath, 'utf-8');
@@ -244,7 +279,7 @@ class FileManager {
      */
     getFilePath(fileName, isThumbnail = false) {
         const targetDir = isThumbnail ? this.thumbsDir : this.worksDir;
-        return path.join(targetDir, fileName);
+        return this.resolveStoragePath(targetDir, this.validateFileName(fileName));
     }
 
     /**
@@ -254,7 +289,7 @@ class FileManager {
      */
     async getImagePath(id) {
         const work = await this.getWork(id);
-        return path.join(this.worksDir, work.fileName);
+        return this.getFilePath(work.fileName);
     }
 
     /**
@@ -264,7 +299,7 @@ class FileManager {
      */
     async getThumbnailPath(id) {
         const work = await this.getWork(id);
-        return path.join(this.thumbsDir, work.fileName);
+        return this.getFilePath(work.fileName, true);
     }
 
     /**
@@ -274,21 +309,22 @@ class FileManager {
      */
     async deleteWork(workId) {
         try {
-            const work = await this.getWork(workId);
+            const safeWorkId = this.validateWorkId(workId);
+            const work = await this.getWork(safeWorkId);
             
             // Удаляем основной файл
-            const imagePath = path.join(this.worksDir, work.fileName);
+            const imagePath = this.getFilePath(work.fileName);
             await fs.unlink(imagePath).catch(() => {});
             
             // Удаляем миниатюру
-            const thumbPath = path.join(this.thumbsDir, work.fileName);
+            const thumbPath = this.getFilePath(work.fileName, true);
             await fs.unlink(thumbPath).catch(() => {});
             
             // Удаляем метаданные
-            const metadataPath = path.join(this.worksDir, `${workId}.json`);
+            const metadataPath = this.getMetadataPath(safeWorkId);
             await fs.unlink(metadataPath).catch(() => {});
             
-            console.log(`[INFO] ✅ Work deleted: ${workId}`);
+            console.log(`[INFO] ✅ Work deleted: ${safeWorkId}`);
             
             // Invalidate cache
             this.invalidateCache();

@@ -171,5 +171,24 @@ describe('FileManager', () => {
             expect(works[1].id).toBe(work2.id);
             expect(works[2].id).toBe(work1.id);
         });
+
+        test('should reject path traversal in work IDs and file names', async () => {
+            await fileManager.initialize();
+
+            await expect(fileManager.getWork('../package')).rejects.toThrow('Invalid work ID');
+            expect(() => fileManager.getFilePath('../package.json')).toThrow('Invalid file name');
+        });
+
+        test('should reject unsafe file names stored in metadata', async () => {
+            await fileManager.initialize();
+            const workId = '20260729-120000-abcdef1234';
+            await fs.writeFile(
+                path.join(fileManager.worksDir, `${workId}.json`),
+                JSON.stringify({ id: workId, fileName: '../package.json' })
+            );
+
+            await expect(fileManager.getImagePath(workId)).rejects.toThrow('Invalid file name');
+            await expect(fileManager.getThumbnailPath(workId)).rejects.toThrow('Invalid file name');
+        });
     });
 });

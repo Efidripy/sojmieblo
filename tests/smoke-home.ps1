@@ -7,6 +7,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $stdoutPath = Join-Path $repoRoot ".tmp\\smoke-home.stdout.log"
 $stderrPath = Join-Path $repoRoot ".tmp\\smoke-home.stderr.log"
+$responsePath = Join-Path $repoRoot ".tmp\\smoke-home.response.html"
 $worksPath = Join-Path $repoRoot "works"
 
 New-Item -ItemType Directory -Path (Split-Path $stdoutPath) -Force | Out-Null
@@ -35,7 +36,7 @@ try {
 
     $homeUri = "http://127.0.0.1:$port/"
     $deadline = (Get-Date).AddSeconds($StartupTimeoutSec)
-    $response = $null
+    $statusCode = $null
 
     while ((Get-Date) -lt $deadline) {
         if ($process.HasExited) {
@@ -43,26 +44,30 @@ try {
         }
 
         try {
-            $response = Invoke-WebRequest -Uri $homeUri -TimeoutSec 3
-            break
+            $statusCode = & curl.exe --silent --show-error --max-time 3 --output $responsePath --write-out "%{http_code}" $homeUri
+            if ($LASTEXITCODE -eq 0 -and $statusCode -match '^\d{3}$') {
+                break
+            }
         } catch {
-            Start-Sleep -Milliseconds 400
         }
+
+        Start-Sleep -Milliseconds 400
     }
 
-    if ($null -eq $response) {
+    if ($null -eq $statusCode) {
         throw "Timed out waiting for $homeUri"
     }
 
-    if ($response.StatusCode -ne 200) {
-        throw "Smoke endpoint returned unexpected status: $($response.StatusCode)"
+    if ([int]$statusCode -ne 200) {
+        throw "Smoke endpoint returned unexpected status: $statusCode"
     }
 
-    if ($response.Content -notmatch "Sojmieblo|<!DOCTYPE html>|<html") {
+    $responseContent = Get-Content -Raw -Path $responsePath
+    if ($responseContent -notmatch "Sojmieblo|<!DOCTYPE html>|<html") {
         throw "Smoke response did not look like the main HTML page."
     }
 
-    Write-Host "Smoke PASS: GET / -> $($response.StatusCode)"
+    Write-Host "Smoke PASS: GET / -> $statusCode"
 } finally {
     if ($process -and -not $process.HasExited) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
