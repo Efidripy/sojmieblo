@@ -360,7 +360,7 @@ This reduces memory usage and improves WebGL performance on lower-end devices.
 
 ```bash
 # Clone repository
-git clone https://github.com/Efidripy/sojmieblo.git
+git clone https://example.invalid/your-account/sojmieblo.git
 cd sojmieblo
 
 # Install dependencies
@@ -439,11 +439,7 @@ Save deformed image.
 **Request:**
 ```json
 {
-  "image": "data:image/jpeg;base64,...",
-  "metadata": {
-    "userAgent": "Mozilla/5.0...",
-    "timestamp": "2024-01-31T12:00:00.000Z"
-  }
+  "image": "data:image/jpeg;base64,..."
 }
 ```
 
@@ -570,8 +566,8 @@ Before deploying to production:
 ## Support
 
 For issues, feature requests, or contributions:
-- **GitHub**: https://github.com/Efidripy/sojmieblo
-- **Issues**: https://github.com/Efidripy/sojmieblo/issues
+- **GitHub**: https://example.invalid/your-account/sojmieblo
+- **Issues**: https://example.invalid/your-account/sojmieblo/issues
 
 ## License
 

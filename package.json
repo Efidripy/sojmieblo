@@ -23,9 +23,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Efidripy/sojmieblo.git"
+    "url": "https://example.invalid/your-account/sojmieblo.git"
   },
-  "author": "Efidripy",
+  "author": "<project-maintainer>",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0",

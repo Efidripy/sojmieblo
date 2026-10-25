@@ -31,7 +31,7 @@ class ImageConverter {
                     ...(addWatermark ? {
                         exif: {
                             IFD0: {
-                                Copyright: 'Created by Sojmieblo - https://github.com/Efidripy/sojmieblo',
+                                Copyright: 'Created by Sojmieblo - https://example.invalid/your-account/sojmieblo',
                                 Software: 'Sojmieblo',
                                 Artist: 'Sojmieblo User',
                                 ImageDescription: 'Deformed face meme created with Sojmieblo'

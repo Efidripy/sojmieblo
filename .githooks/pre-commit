@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+blocked=0
+
+while IFS= read -r -d '' file; do
+    case "$file" in
+        .env|.env.*|*.env|*.env.*)
+            if [ "$file" != ".env.example" ] && git show ":$file" | grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*[^[:space:]#]'; then
+                echo "Blocked: filled environment file staged: $file" >&2
+                blocked=1
+            fi
+            ;;
+    esac
+
+    if git show ":$file" | grep -Eq -- '-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----|hf_[A-Za-z0-9_-]+|ghp_[A-Za-z0-9_-]+|xox[A-Za-z-]*-[A-Za-z0-9-]+|AKIA[0-9A-Z]{16}|[0-9]{8,10}:[A-Za-z0-9_-]{20,}|C:\\Users\\[^<[:space:]\\]+'; then
+        echo "Blocked: possible secret or personal path staged: $file" >&2
+        blocked=1
+    fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+if [ "$blocked" -ne 0 ]; then
+    echo "Remove the sensitive value or replace it with a documented placeholder." >&2
+    exit 1
+fi

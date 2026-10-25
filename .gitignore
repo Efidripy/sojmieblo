@@ -1,11 +1,37 @@
 node_modules/
 *.log
 .DS_Store
-.env
+.tmp/
+.env*
+!.env.example
+
+# Secrets and certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Local data and dumps
+*.db
+*.sqlite*
+*.sql
+*.dump
 
 # Release artifacts
 sojmieblo-release.tar.gz
 release-temp/
+build/
+dist/
+coverage/
+.venv/
+venv/
 
-# Works directory (uploaded images)
+# User-generated and source media
 works/
+screenshots/
+recordings/
+source-images/
+originals/
+uploads/

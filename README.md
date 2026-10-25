@@ -28,7 +28,7 @@
 
 ### Локальный запуск
 ```bash
-git clone https://github.com/Efidripy/sojmieblo.git
+git clone https://example.invalid/your-account/sojmieblo.git
 cd sojmieblo
 npm install
 npm start
@@ -45,12 +45,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke-home.ps1
 
 **Автоматическая установка:**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Efidripy/sojmieblo/main/install.sh | sudo bash
+curl -fsSL https://example.invalid/your-account/sojmieblo/main/install.sh | sudo bash
 ```
 
 **С Nginx reverse proxy:**
 ```bash
-wget https://raw.githubusercontent.com/Efidripy/sojmieblo/main/deploy_sojmieblo.sh
+wget https://example.invalid/your-account/sojmieblo/main/deploy_sojmieblo.sh
 chmod +x deploy_sojmieblo.sh
 sudo ./deploy_sojmieblo.sh
 ```
@@ -136,5 +136,7 @@ MIT License — свободно используйте, модифицируй�
 
 **🔗 Полезные ссылки:**
 - 📖 [Техническая документация](./TECHNICAL.md)
-- 🐛 [Сообщить об ошибке](https://github.com/Efidripy/sojmieblo/issues)
-- 💡 [Предложить улучшение](https://github.com/Efidripy/sojmieblo/issues/new)
+- 🐛 Сообщить об ошибке: `https://example.invalid/your-account/sojmieblo/issues`
+- 💡 Предложить улучшение: `https://example.invalid/your-account/sojmieblo/issues/new`
+
+Для включения локальной проверки перед коммитом выполните: `git config core.hooksPath .githooks`.

@@ -26,7 +26,7 @@ jobs:
           
       - name: Commit changes
         run: |
-          git config --local user.email "action@github.com"
+          git config --local user.email "automation@example.invalid"
           git config --local user.name "GitHub Action"
           git add package.json
           if git diff --staged --quiet; then

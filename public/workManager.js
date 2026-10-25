@@ -134,13 +134,7 @@ class WorkManager {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    image: imageDataURL,
-                    metadata: {
-                        userAgent: navigator.userAgent,
-                        timestamp: new Date().toISOString()
-                    }
-                })
+                body: JSON.stringify({ image: imageDataURL })
             });
 
             if (!response.ok) {

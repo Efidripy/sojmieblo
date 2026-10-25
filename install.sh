@@ -157,7 +157,7 @@ install_app() {
     else
         echo -e "${BLUE}📦 Cloning repository...${NC}"
         mkdir -p "$INSTALL_DIR"
-        git clone https://github.com/Efidripy/sojmieblo.git "$INSTALL_DIR"
+        git clone https://example.invalid/your-account/sojmieblo.git "$INSTALL_DIR"
         cd "$INSTALL_DIR"
     fi
     

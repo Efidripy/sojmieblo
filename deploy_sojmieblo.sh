@@ -552,7 +552,7 @@ update_application() {
     
     # Клонируем во временную директорию
     TEMP_CLONE="/tmp/sojmieblo_update_$$"
-    git clone https://github.com/Efidripy/sojmieblo.git "$TEMP_CLONE" || handle_error "Не удалось клонировать репозиторий"
+    git clone https://example.invalid/your-account/sojmieblo.git "$TEMP_CLONE" || handle_error "Не удалось клонировать репозиторий"
     
     # Проверяем изменения в package.json перед обновлением
     local package_changed=0
@@ -675,7 +675,7 @@ mkdir -p $FRONTEND_DIR
 
 # Clone repository to temp location
 TEMP_CLONE="/tmp/sojmieblo_clone_$$"
-git clone https://github.com/Efidripy/sojmieblo.git $TEMP_CLONE || error_exit "Git clone failed"
+git clone https://example.invalid/your-account/sojmieblo.git $TEMP_CLONE || error_exit "Git clone failed"
 
 # Copy backend files
 cp $TEMP_CLONE/server.js $BACKEND_DIR/

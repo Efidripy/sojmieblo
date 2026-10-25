@@ -72,7 +72,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API: Сохранить работу
 app.post('/api/save-work', async (req, res) => {
     try {
-        const { image, metadata } = req.body;
+        const { image } = req.body;
         
         if (!image) {
             return res.status(400).json({ error: 'Image data is required' });
@@ -123,8 +123,7 @@ app.post('/api/save-work', async (req, res) => {
             {
                 originalWidth: imageInfo.width,
                 originalHeight: imageInfo.height,
-                format: imageInfo.format,
-                userMetadata: metadata
+                format: imageInfo.format
             }
         );
 
